@@ -59,8 +59,8 @@ label{display:block;font-size:14px;color:var(--mu);margin:14px 0 4px}
 mjx-container{max-width:100%;overflow-x:auto;overflow-y:hidden}
 .ck{display:flex;gap:10px;align-items:flex-start;margin:0 0 10px;color:var(--tx);font-size:15px}.ck input{margin:5px 0 0;flex:none}
 .paper{background:#fff;color:#000;border-radius:12px;padding:14px;border:1px solid var(--bd);overflow-x:auto;font-size:14px;line-height:1.6}
-.paper .q{border-collapse:separate;border-spacing:0;width:100%;border:1.5px solid #333;border-radius:14px}
-.paper .q td{padding:8px 14px;vertical-align:top;word-break:break-word}
+.paper .q{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;border:1.5px solid #333;border-radius:14px}
+.paper .q td{padding:8px 14px;vertical-align:top;word-break:break-word;overflow-wrap:anywhere;min-width:0}.paper .q img:not(.mi){max-width:100%;height:auto}
 .paper .q tr+tr td{border-top:1.5px solid #333}
 .paper .q td.h2:first-child{border-right:1.5px solid #333}
 .paper .h2{width:50%;height:44px}.paper .h3{height:56px}.paper .h4{height:44px}
@@ -209,7 +209,7 @@ function pvHTML(i,m){
  return '<table class="q eq">'+one(`<h2><small>${hdT(i)}</small></h2>`+tx(i.q)+im(i.qi))+(m==3?
   `<tr>${td(cl('正確答案',i.ans),'h2')}${td(cl('自己選的答案',i.mine,0,1),'h2')}</tr>`
   +one(`<p class=l style="color:#c0392b">當時思路與錯誤原因</p><div style="min-height:${(i.c1?(i.n1||3):0)*26}px">${tx(i.th)}${im(i.ti)}</div>`,'h4')
-  +one(`<p class=l>詳解／最佳解</p><div class=ex>${tx(cpx(i.ex))}${im(i.ei)}</div>`,'h3')+one(`<p class=l>再練一次</p>${tx(i.q)}${im(i.qi)}${bl}`,'bz')
+  +one(`<p class=l>詳解／最佳解</p><div class=ex>${tx(cpx(i.ex))}${im(i.ei)}</div>`,'h3')+(rpOn()?one(`<p class=l>再練一次</p>${rqOn()?tx(i.q)+im(i.qi):''}${bl}`,'bz'):'')
   :one(`<p class=l>作答區</p>${bl}`,'bz'))+'</table>'}
 function vDetail(){
  const i=S.items.find(x=>x.id==V.id);if(!i){V.v='list';return vList()}
@@ -292,6 +292,10 @@ function scanify(cv){
    const b=(bg[y0*bw+x0]*(1-tx)+bg[y0*bw+x1]*tx)*(1-ty)+(bg[y1*bw+x0]*(1-tx)+bg[y1*bw+x1]*tx)*ty;
    const v=L[y*w+x]/b<.8?0:255,o=(y*w+x)*4;d[o]=d[o+1]=d[o+2]=v}}
  g.putImageData(id,0,0)}
+const lsg=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const rpOn=()=>lsg('rp')=='1',rqOn=()=>lsg('rqs')!='0';
+function setRP(k,v){try{localStorage.setItem(k,v?'1':'0');toast('已儲存')}catch(e){toast('無法儲存設定')}render()}
+function rpForm(){return `<h3>匯出版面</h3><label class=ck><input type=checkbox ${rpOn()?'checked':''} onchange="setRP('rp',this.checked)"><span>匯出「完整錯題本」時，加上「再練一次」欄位</span></label>${rpOn()?`<label class=ck style="margin-top:8px"><input type=checkbox ${rqOn()?'checked':''} onchange="setRP('rqs',this.checked)"><span>「再練一次」欄位內附上題目（方便直接重做）</span></label>`:''}<p class=mu style="margin:6px 0 0">預設不加，版面比較精簡。練習卷的「作答區」不受影響。</p>`}
 const IQ={s:[1000,.72,'省空間（約 1000 像素）'],m:[1600,.82,'標準（約 1600 像素）'],h:[2400,.9,'高畫質（約 2400 像素）']};
 function iq(){try{const v=localStorage.getItem('iq');return IQ[v]?v:'h'}catch(e){return'h'}}
 function setIQ(v){try{localStorage.setItem('iq',v);toast('已儲存')}catch(e){toast('無法儲存設定')}}
@@ -428,6 +432,7 @@ function vSet(){const n=S.items.length,m=S.items.filter(i=>i.streak>=2).length;
  <h3>科目</h3><div class=chips style="flex-wrap:wrap">${S.subjects.map((s,k)=>`<span class=chip>${esc(s)}<b data-k="${k}" onclick="delSub(+this.dataset.k)">✕</b></span>`).join('')}</div>
  <div class=row><input id=ns placeholder="新增科目" style="flex:1"><button class=btn onclick="addSub()">加入</button></div>
  ${tagMgr()}
+ ${rpForm()}
  ${iqForm()}
  ${aiForm()}
  ${instForm()}
@@ -463,7 +468,7 @@ function vExp(){const l=xl(),n=l.filter(i=>X.sel[i.id]).length;
  const o=(v,t,c)=>`<option value=${v} ${c?'selected':''}>${t}</option>`;
  return `<h1>匯出／列印</h1><p class=mu>選擇格式後產生檔案。下方是你勾選的題目，取消勾選就不會匯出。</p>
  <label>格式</label><select onchange="X.m=this.value">${o(3,'完整錯題本（所有欄位）',X.m==3)}${o(1,'練習卷：只有題目，留空白作答',X.m==1)}${o(2,'練習卷＋文末附答案與詳解',X.m==2)}</select>
- <label class=ck style="margin-top:14px"><input type=checkbox ${X.rq?'checked':''} onchange="X.rq=this.checked"><span>「再練一次」欄位附上題目（方便直接重做）</span></label>
+ <p class=mu style="margin:10px 0 0;font-size:13px">「再練一次」欄位：${rpOn()?'已開啟':'未開啟'}（可到「設定 → 匯出版面」更改）</p>
  <label>檔案類型</label><select onchange="X.t=this.value">${o('jpg','圖片（.jpg，一題一張，逐張存檔）',X.t=='jpg')}${o('zip','圖片（多題打包成一個 .zip）',X.t=='zip')}${o('pdf','PDF（.pdf，每頁放兩題）',X.t=='pdf')}${o('docx','Word（.docx）',X.t=='docx')}${o('html','網頁（.html，可用瀏覽器列印成 PDF）',X.t=='html')}</select>
  ${canSh()?`<label class=ck style="margin-top:14px"><input type=checkbox ${X.sh?'checked':''} onchange="X.sh=this.checked"><span>產生後用系統分享選單，直接傳到筆記軟體（GoodNotes、Notability、OneNote…）</span></label>`:''}
  <p class=mu style="margin:14px 0 8px">要匯出的題目（${n} / ${l.length}）</p>
@@ -490,9 +495,9 @@ async function doExp(){
   two=(a,b)=>`<tr>${td(a,'h2')}${td(b,'h2')}</tr>`,one=(c,k)=>`<tr>${td(c,k,1)}</tr>`,
   th=i=>`<p class=l style="color:#c0392b">當時思路與錯誤原因</p><div style="min-height:${(i.c1?(i.n1||3):0)*26}px">${tx(i.th)}${im(i.ti)}</div>`,
   r2=i=>two(cl('正確答案',i.ans),cl('自己選的答案',i.mine,0,1))+one(th(i),'h4')+one(`<p class=l>詳解／最佳解</p><div class=ex>${tx(cpx(i.ex))}${im(i.ei)}</div>`,'h3');
- let h=l.map((i,n)=>'<table class="q eq">'+one(head(i,n+1)+tx(i.q)+im(i.qi))+(m==3?r2(i)+one(`<p class=l>再練一次</p>${X.rq?tx(i.q)+im(i.qi):''}${ln(i)}`,'bz'):one(`<p class=l>作答區</p>${ln(i)}`,'bz'))+'</table>').join('');
+ let h=l.map((i,n)=>'<table class="q eq">'+one(head(i,n+1)+tx(i.q)+im(i.qi))+(m==3?r2(i)+(rpOn()?one(`<p class=l>再練一次</p>${rqOn()?tx(i.q)+im(i.qi):''}${ln(i)}`,'bz'):''):one(`<p class=l>作答區</p>${ln(i)}`,'bz'))+'</table>').join('');
  if(m==2)h+='<div class=pb></div><h1>參考答案與詳解</h1>'+l.map((i,n)=>'<table class=q>'+one(head(i,n+1))+r2(i)+'</table>').join('');
- const css='@page{size:A4;margin:12mm 12mm 12mm 15mm}body{font:11pt/1.7 "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;color:#000;width:183mm;margin:0 auto;padding:12px 0}@media print{body{width:auto;padding:0}}h1{font-size:18pt}h2{font-size:13pt;margin:0 0 6px}h2 small{font-weight:400;color:#666;font-size:10pt}.q{border-collapse:separate;border-spacing:0;width:100%;border:1.5px solid #333;border-radius:14px;margin:0 0 32px;page-break-inside:avoid;break-inside:avoid}.q td{padding:8px 16px;vertical-align:top}.q tr+tr td{border-top:1.5px solid #333}.q td.h2:first-child{border-right:1.5px solid #333}.h2{width:50%;height:44px}.h3{height:56px}.h4{height:44px}.q img:not(.mi){display:block;margin:6px 0;width:auto;height:auto;max-width:100%;object-fit:contain}.q tr:first-child img:not(.mi){max-height:230px}.q tr+tr img:not(.mi){max-height:170px}img.mi{display:inline;vertical-align:middle}img.mi.dm{display:block;margin:3px auto}.l{margin:2px 0;font-weight:700;color:#1f7a5c}.bl{height:90px}.pb{page-break-after:always}.ex{font-size:.91em;line-height:1.4}.ex img.dm{margin:3px auto!important}';
+ const css='@page{size:A4;margin:12mm 12mm 12mm 15mm}body{font:11pt/1.7 "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;color:#000;width:183mm;margin:0 auto;padding:12px 0}@media print{body{width:auto;padding:0}}h1{font-size:18pt}h2{font-size:13pt;margin:0 0 6px}h2 small{font-weight:400;color:#666;font-size:10pt}.q{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;border:1.5px solid #333;border-radius:14px;margin:0 0 32px;page-break-inside:avoid;break-inside:avoid}.q td{padding:8px 16px;vertical-align:top;overflow-wrap:anywhere;min-width:0;overflow:hidden}.q tr+tr td{border-top:1.5px solid #333}.q td.h2:first-child{border-right:1.5px solid #333}.h2{width:50%;height:44px}.h3{height:56px}.h4{height:44px}.q img:not(.mi){display:block;margin:6px 0;width:auto;height:auto;max-width:100%;object-fit:contain}.q tr:first-child img:not(.mi){max-height:230px}.q tr+tr img:not(.mi){max-height:170px}img.mi{display:inline;vertical-align:middle}img.mi.dm{display:block;margin:3px auto}.l{margin:2px 0;font-weight:700;color:#1f7a5c}.bl{height:90px}.pb{page-break-after:always}.ex{font-size:.91em;line-height:1.4}.ex img.dm{margin:3px auto!important}';
  const d=document.createElement('div');d.style.cssText='position:absolute;left:-9999px;top:0;width:680px';d.innerHTML=h;document.body.appendChild(d);
  try{if(window.MathJax&&MathJax.typesetPromise){await MathJax.typesetPromise([d]);await raster(d)}}catch(e){}
  if(X.t=='jpg'||X.t=='zip'||X.t=='pdf'){try{
@@ -581,7 +586,7 @@ async function mkDocx(l,m){
  for(let n=0;n<l.length;n++){const i=l[n],a0=acc,qx=await P(i.q)+await PI(i.qi,230),
    nl=(i.q||'').split('\n').reduce((z,t)=>z+Math.max(1,Math.ceil(t.replace(/\$[^$]*\$/g,'口').length/38)),0),hq=(i.q||(i.qi&&i.qi.length))?600+nl*340+(acc-a0):0;
   const S3=hq+1000+Math.max(1000+(i.c1?(i.n1||3):0)*400,Math.round(hq/2))+Math.max(1400,hq),f3=Math.max(hq,6900-S3),f1=Math.max(hq,6900-hq);
-  b+=tb(full(0,HD(i,n+1)+qx)+(m==3?await R2(i)+await R3(i,hq)+full(f3,L('再練一次')+(X.rq?clone(qx):'')+BL(i,X.rq?0:hq)):full(f1,L('作答區')+BL(i,hq))))}
+  b+=tb(full(0,HD(i,n+1)+qx)+(m==3?await R2(i)+await R3(i,hq)+(rpOn()?full(f3,L('再練一次')+(rqOn()?clone(qx):'')+BL(i,rqOn()?0:hq)):''):full(f1,L('作答區')+BL(i,hq))))}
  if(m==2){b+='<w:p><w:r><w:br w:type="page"/></w:r></w:p>'+T('參考答案與詳解',32);
   for(let n=0;n<l.length;n++){const i=l[n];b+=tb(full(0,HD(i,n+1))+await R2(i)+await R3(i))}}
  const W='http://schemas.openxmlformats.org/',R=W+'officeDocument/2006/relationships/',X0='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',Z=new JSZip();
