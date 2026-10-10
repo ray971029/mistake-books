@@ -496,7 +496,7 @@ async function doExp(){
  const d=document.createElement('div');d.style.cssText='position:absolute;left:-9999px;top:0;width:680px';d.innerHTML=h;document.body.appendChild(d);
  try{if(window.MathJax&&MathJax.typesetPromise){await MathJax.typesetPromise([d]);await raster(d)}}catch(e){}
  if(X.t=='jpg'||X.t=='zip'||X.t=='pdf'){try{
-   if(!window.html2canvas)throw new Error('html2canvas 未載入');
+   await needLib('html2canvas');if(!window.html2canvas)throw new Error('html2canvas 未載入，請確認網路或重新整理後再試');
    const st=document.createElement('style');st.textContent=css.replace(/body\{[^}]*\}/,'');d.prepend(st);
    d.style.cssText='position:absolute;left:-9999px;top:0;width:794px;background:#fff;color:#000;padding:0;font:11pt/1.6 "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif';
    [...d.querySelectorAll('table.q')].forEach(t=>{const wr=document.createElement('div');wr.className='wrp';wr.style.cssText='width:794px;min-height:561px;box-sizing:border-box;padding:24px 36px 24px 57px;background:#fff';t.replaceWith(wr);wr.appendChild(t);t.style.margin='0'});
@@ -505,7 +505,7 @@ async function doExp(){
    for(let k=0;k<ts.length;k++){const cv=await html2canvas(ts[k],{scale:2,backgroundColor:'#fff'});out.push(await new Promise(r=>cv.toBlob(r,'image/jpeg',.92)));dm.push([cv.width,cv.height])}
    const nm=k=>(m==2&&k>=l.length?'答案'+(k-l.length+1):'題'+(k+1))+'.jpg';
    if(X.t=='pdf')await outF([{fn:'錯題本-'+day+'.pdf',b:await mkPdf(out,dm)}]);
-   else if(X.t=='zip'&&out.length>1){const Z=new JSZip();out.forEach((b,k)=>Z.file(nm(k),b));await outF([{fn:'錯題本-圖片-'+day+'.zip',b:await Z.generateAsync({type:'blob'})}])}
+   else if(X.t=='zip'&&out.length>1){await needLib('JSZip');const Z=new JSZip();out.forEach((b,k)=>Z.file(nm(k),b));await outF([{fn:'錯題本-圖片-'+day+'.zip',b:await Z.generateAsync({type:'blob'})}])}
    else await outF(out.map((b,k)=>({fn:out.length==1?'錯題本-'+day+'.jpg':'錯題本-'+day+'-'+nm(k),b})))
   }catch(e){toast('產生檔案失敗：'+(e&&e.message||''))}d.remove();return}
  const body=d.innerHTML;d.remove();
@@ -513,6 +513,8 @@ async function doExp(){
  const fn='錯題本-'+['','練習卷','練習卷含答案','完整版'][m]+'-'+new Date().toISOString().slice(0,10)+'.html';
  await outF([{fn,b:new Blob([html],{type:'text/html'})}])}
 
+const CD='https://cdnjs.cloudflare.com/'+'ajax/libs/',LIBS={html2canvas:['vendor/html2canvas.min.js',CD+'html2canvas/1.4.1/html2canvas.min.js'],JSZip:['vendor/jszip.min.js',CD+'jszip/3.10.1/jszip.min.js']};
+async function needLib(n){if(window[n])return;for(const u of LIBS[n]){try{await new Promise((ok,no)=>{const e=document.createElement('script');e.src=u;e.onload=ok;e.onerror=no;document.head.appendChild(e)});if(window[n])return}catch(e){}}}
 const MIME={jpg:'image/jpeg',pdf:'application/pdf',zip:'application/zip',html:'text/html',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'};
 async function saveAll(fs){for(let k=0;k<fs.length;k++){if(fs.length>1)toast(`儲存第 ${k+1} / ${fs.length} 個…`);await dlf(fs[k].fn,fs[k].b);if(k<fs.length-1)await new Promise(r=>setTimeout(r,500))}}
 async function outF(fs){
@@ -550,7 +552,7 @@ async function svgPng(s){const r=s.getBoundingClientRect(),w=Math.ceil(r.width),
  const im=await new Promise((res,rej)=>{const x=new Image();x.onload=()=>res(x);x.onerror=rej;x.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(s))});
  const cv=document.createElement('canvas');cv.width=w*2;cv.height=h*2;const g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);g.drawImage(im,0,0,cv.width,cv.height);return{u:cv.toDataURL('image/png'),w,h}}
 async function mkDocx(l,m){
- if(!window.JSZip)throw new Error('JSZip 未載入');
+ await needLib('JSZip');if(!window.JSZip)throw new Error('JSZip 未載入，請確認網路或重新整理後再試');
  const media=[];let id=0,acc=0,dup=0,sz=0;const clone=x=>x.replace(/<wp:docPr id="\d+" name="p\d+"\/>/g,()=>{const k=++dup;return `<wp:docPr id="${900000+k}" name="d${k}"/>`});const E=9525;
  const run=(u,w,h)=>{const k=++id,ext=u.startsWith('data:image/png')?'png':'jpeg',cx=Math.round(w*E),cy=Math.round(h*E);media.push({k,ext,b:u.split(',')[1]});
   return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${k}" name="p${k}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${k}" name="p${k}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rM${k}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`};
