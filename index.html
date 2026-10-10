@@ -455,7 +455,8 @@ function imp(){const f=document.createElement('input');f.type='file';f.accept='.
   await save();toast('已匯入 '+d.items.length+' 題');render()}catch(e){toast('備份檔格式不正確')}};f.click()}
 
 let MJF=0;
-let X={rq:1,tg:'',f:'全部',m:'3',t:'jpg',only:0,pick:[],sel:{}};
+let X={rq:1,tg:'',f:'全部',m:'3',t:'jpg',sh:0,only:0,pick:[],sel:{}};
+const canSh=()=>{try{return !!(navigator.share&&navigator.canShare&&navigator.canShare({files:[new File(['x'],'a.pdf',{type:'application/pdf'})]}))}catch(e){return false}};
 const xl=()=>S.items.filter(i=>X.pick.includes(i.id)).sort((a,b)=>b.created-a.created);
 function vExp(){const l=xl(),n=l.filter(i=>X.sel[i.id]).length;
  if(!l.length)return `<h1>匯出／列印</h1><p class=mu>還沒有選題目。請先到「錯題」頁面，長按想匯出的題目並勾選，再按「匯出」。</p><div class=acts><button class=btn onclick="go('list')">到錯題頁面選題目</button></div>`;
@@ -463,7 +464,8 @@ function vExp(){const l=xl(),n=l.filter(i=>X.sel[i.id]).length;
  return `<h1>匯出／列印</h1><p class=mu>選擇格式後產生檔案。下方是你勾選的題目，取消勾選就不會匯出。</p>
  <label>格式</label><select onchange="X.m=this.value">${o(3,'完整錯題本（所有欄位）',X.m==3)}${o(1,'練習卷：只有題目，留空白作答',X.m==1)}${o(2,'練習卷＋文末附答案與詳解',X.m==2)}</select>
  <label class=ck style="margin-top:14px"><input type=checkbox ${X.rq?'checked':''} onchange="X.rq=this.checked"><span>「再練一次」欄位附上題目（方便直接重做）</span></label>
- <label>檔案類型</label><select onchange="X.t=this.value">${o('jpg','圖片（.jpg，一題一張，逐張存檔）',X.t=='jpg')}${o('zip','圖片（多題打包成一個 .zip）',X.t=='zip')}${o('docx','Word（.docx）',X.t=='docx')}${o('html','網頁（.html，可用瀏覽器列印成 PDF）',X.t=='html')}</select>
+ <label>檔案類型</label><select onchange="X.t=this.value">${o('jpg','圖片（.jpg，一題一張，逐張存檔）',X.t=='jpg')}${o('zip','圖片（多題打包成一個 .zip）',X.t=='zip')}${o('pdf','PDF（.pdf，每頁放兩題）',X.t=='pdf')}${o('docx','Word（.docx）',X.t=='docx')}${o('html','網頁（.html，可用瀏覽器列印成 PDF）',X.t=='html')}</select>
+ ${canSh()?`<label class=ck style="margin-top:14px"><input type=checkbox ${X.sh?'checked':''} onchange="X.sh=this.checked"><span>產生後用系統分享選單，直接傳到筆記軟體（GoodNotes、Notability、OneNote…）</span></label>`:''}
  <p class=mu style="margin:14px 0 8px">要匯出的題目（${n} / ${l.length}）</p>
  ${l.map(i=>`<label class="card ck"><input type=checkbox ${X.sel[i.id]?'checked':''} onchange="X.sel['${i.id}']=this.checked;render()"><span><span class=tag>${esc(i.sub)}</span> ${i.q?esc(i.q.replace(/\$/g,'').slice(0,60)):'（圖片題目）'}</span></label>`).join('')}
  <div class=acts><button class=btn ${n?'':'disabled'} onclick="doExp()">產生檔案（${n} 題）</button></div>`}
@@ -479,7 +481,7 @@ async function doExp(){
  if(l.some(i=>/\$|\\\(/.test([i.q,i.mine,i.th,i.ans,i.ex].join(''))))try{await MathJax.startup.promise}catch(e){}
  if(l.some(i=>/\$|\\\(/.test([i.q,i.mine,i.th,i.ans,i.ex].join('')))&&!(window.MathJax&&MathJax.typesetPromise&&MathJax.tex2svgPromise))return toast('算式渲染工具還沒載入（需要網路），請稍後再匯出');
  toast('產生中…');
- if(X.t=='docx'){try{const m=+X.m;await dlf('錯題本-'+['','練習卷','練習卷含答案','完整版'][m]+'-'+new Date().toISOString().slice(0,10)+'.docx',await mkDocx(l,m))}catch(e){toast('產生 Word 失敗：'+(e&&e.message||''))}return}
+ if(X.t=='docx'){try{const m=+X.m;await outF([{fn:'錯題本-'+['','練習卷','練習卷含答案','完整版'][m]+'-'+new Date().toISOString().slice(0,10)+'.docx',b:await mkDocx(l,m)}])}catch(e){toast('產生 Word 失敗：'+(e&&e.message||''))}return}
  const m=+X.m,im=a=>(a||[]).map(u=>`<img src="${u}">`).join(''),tx=t=>t?`<div>${rt(t)}</div>`:'',
   sec=(t,txt,a)=>(txt||(a&&a.length))?`<p class=l>${t}</p>${tx(txt)}${im(a)}`:'',ln=i=>`<div class=bl style="height:${90+(i.c2?(i.n2||3):0)*26}px"></div>`,
   head=(i,n)=>`<h2>${m==2?n+'. ':''}<small>${hdT(i)}</small></h2>`;
@@ -493,23 +495,54 @@ async function doExp(){
  const css='@page{size:A4;margin:12mm 12mm 12mm 15mm}body{font:11pt/1.7 "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;color:#000;width:183mm;margin:0 auto;padding:12px 0}@media print{body{width:auto;padding:0}}h1{font-size:18pt}h2{font-size:13pt;margin:0 0 6px}h2 small{font-weight:400;color:#666;font-size:10pt}.q{border-collapse:separate;border-spacing:0;width:100%;border:1.5px solid #333;border-radius:14px;margin:0 0 32px;page-break-inside:avoid;break-inside:avoid}.q td{padding:8px 16px;vertical-align:top}.q tr+tr td{border-top:1.5px solid #333}.q td.h2:first-child{border-right:1.5px solid #333}.h2{width:50%;height:44px}.h3{height:56px}.h4{height:44px}.q img:not(.mi){display:block;margin:6px 0;width:auto;height:auto;max-width:100%;object-fit:contain}.q tr:first-child img:not(.mi){max-height:230px}.q tr+tr img:not(.mi){max-height:170px}img.mi{display:inline;vertical-align:middle}img.mi.dm{display:block;margin:3px auto}.l{margin:2px 0;font-weight:700;color:#1f7a5c}.bl{height:90px}.pb{page-break-after:always}.ex{font-size:.91em;line-height:1.4}.ex img.dm{margin:3px auto!important}';
  const d=document.createElement('div');d.style.cssText='position:absolute;left:-9999px;top:0;width:680px';d.innerHTML=h;document.body.appendChild(d);
  try{if(window.MathJax&&MathJax.typesetPromise){await MathJax.typesetPromise([d]);await raster(d)}}catch(e){}
- if(X.t=='jpg'||X.t=='zip'){try{
+ if(X.t=='jpg'||X.t=='zip'||X.t=='pdf'){try{
    if(!window.html2canvas)throw new Error('html2canvas 未載入');
    const st=document.createElement('style');st.textContent=css.replace(/body\{[^}]*\}/,'');d.prepend(st);
    d.style.cssText='position:absolute;left:-9999px;top:0;width:794px;background:#fff;color:#000;padding:0;font:11pt/1.6 "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif';
    [...d.querySelectorAll('table.q')].forEach(t=>{const wr=document.createElement('div');wr.className='wrp';wr.style.cssText='width:794px;min-height:561px;box-sizing:border-box;padding:24px 36px 24px 57px;background:#fff';t.replaceWith(wr);wr.appendChild(t);t.style.margin='0'});
    await Promise.all([...d.querySelectorAll('img')].map(i=>i.decode?i.decode().catch(()=>{}):0));eqRows(d);
-   const ts=[...d.querySelectorAll('.wrp')],out=[],day=new Date().toISOString().slice(0,10);
-   for(let k=0;k<ts.length;k++){const cv=await html2canvas(ts[k],{scale:2,backgroundColor:'#fff'});out.push(await new Promise(r=>cv.toBlob(r,'image/jpeg',.92)))}
+   const ts=[...d.querySelectorAll('.wrp')],out=[],dm=[],day=new Date().toISOString().slice(0,10);
+   for(let k=0;k<ts.length;k++){const cv=await html2canvas(ts[k],{scale:2,backgroundColor:'#fff'});out.push(await new Promise(r=>cv.toBlob(r,'image/jpeg',.92)));dm.push([cv.width,cv.height])}
    const nm=k=>(m==2&&k>=l.length?'答案'+(k-l.length+1):'題'+(k+1))+'.jpg';
-   if(X.t=='zip'&&out.length>1){const Z=new JSZip();out.forEach((b,k)=>Z.file(nm(k),b));await dlf('錯題本-圖片-'+day+'.zip',await Z.generateAsync({type:'blob'}))}
-   else for(let k=0;k<out.length;k++){toast(`儲存第 ${k+1} / ${out.length} 張…`);await dlf(out.length==1?'錯題本-'+day+'.jpg':'錯題本-'+day+'-'+nm(k),out[k]);if(k<out.length-1)await new Promise(r=>setTimeout(r,500))}
-  }catch(e){toast('產生圖片失敗：'+(e&&e.message||''))}d.remove();return}
+   if(X.t=='pdf')await outF([{fn:'錯題本-'+day+'.pdf',b:await mkPdf(out,dm)}]);
+   else if(X.t=='zip'&&out.length>1){const Z=new JSZip();out.forEach((b,k)=>Z.file(nm(k),b));await outF([{fn:'錯題本-圖片-'+day+'.zip',b:await Z.generateAsync({type:'blob'})}])}
+   else await outF(out.map((b,k)=>({fn:out.length==1?'錯題本-'+day+'.jpg':'錯題本-'+day+'-'+nm(k),b})))
+  }catch(e){toast('產生檔案失敗：'+(e&&e.message||''))}d.remove();return}
  const body=d.innerHTML;d.remove();
  const html=`<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><title>錯題本</title><style>${css}</style></head><body><h1>錯題本${X.f=='全部'?'':'－'+esc(X.f)}</h1><p style="color:#666">${new Date().toLocaleDateString('zh-TW')}　共 ${l.length} 題</p>${body}<script>addEventListener('load',()=>(${eqRows.toString()})(document))<\/script></body></html>`;
  const fn='錯題本-'+['','練習卷','練習卷含答案','完整版'][m]+'-'+new Date().toISOString().slice(0,10)+'.html';
- await dlf(fn,html)}
+ await outF([{fn,b:new Blob([html],{type:'text/html'})}])}
 
+const MIME={jpg:'image/jpeg',pdf:'application/pdf',zip:'application/zip',html:'text/html',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'};
+async function saveAll(fs){for(let k=0;k<fs.length;k++){if(fs.length>1)toast(`儲存第 ${k+1} / ${fs.length} 個…`);await dlf(fs[k].fn,fs[k].b);if(k<fs.length-1)await new Promise(r=>setTimeout(r,500))}}
+async function outF(fs){
+ if(!(X.sh&&canSh()))return saveAll(fs);
+ const F=fs.map(f=>new File([f.b],f.fn,{type:MIME[f.fn.split('.').pop()]||'application/octet-stream'}));
+ if(!navigator.canShare({files:F})){toast('這些檔案無法用分享選單傳送，改為存檔');return saveAll(fs)}
+ return new Promise(res=>{const o=document.createElement('div');o.id='shs';o.style.cssText='position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center';
+  o.innerHTML=`<div style="background:var(--card);color:var(--tx);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom,0px));box-sizing:border-box"><h3 style="margin:0 0 6px">檔案已準備好</h3><p class=mu style="margin:0 0 4px">${F.length==1?esc(F[0].name):F.length+' 個圖片檔'}。按下方按鈕後，在系統選單選你的筆記軟體。</p><div class=acts><button class=btn id=shg>傳送到其他 App</button><button class=ghost id=shd>改成存檔</button><button class=ghost id=shx>取消</button></div></div>`;
+  document.body.appendChild(o);const end=()=>{o.remove();res()};
+  o.querySelector('#shx').onclick=end;o.querySelector('#shd').onclick=async()=>{o.remove();await saveAll(fs);res()};
+  o.querySelector('#shg').onclick=async()=>{try{await navigator.share({files:F});o.remove();toast('已傳送');res()}catch(e){if(e&&e.name=='AbortError')return;o.remove();toast('無法開啟分享選單，改為存檔');await saveAll(fs);res()}}})}
+async function mkPdf(bl,dm){
+ const W=595.28,H=841.89,enc=new TextEncoder(),parts=[],offs=[];let len=0;
+ const put=x=>{const b=typeof x=='string'?enc.encode(x):x;parts.push(b);len+=b.length};
+ const f=n=>n.toFixed(2),N=bl.length,pg=[];let cur=null,y=0;
+ const hs=dm.map(d=>Math.min(H,d[1]/d[0]*W)),ws=dm.map((d,k)=>hs[k]<d[1]/d[0]*W?hs[k]*d[0]/d[1]:W);
+ for(let k=0;k<N;k++){if(!cur||y+hs[k]>H+.5){cur=[];pg.push(cur);y=0}cur.push({k,y});y+=hs[k]}
+ const P=pg.length,pid=p=>3+N+2*p;
+ put('%PDF-1.4\n');
+ const obj=(n,fn)=>{offs[n]=len;put(n+' 0 obj\n');fn();put('\nendobj\n')};
+ obj(1,()=>put('<</Type/Catalog/Pages 2 0 R>>'));
+ obj(2,()=>put('<</Type/Pages/Count '+P+'/Kids ['+pg.map((_,p)=>pid(p)+' 0 R').join(' ')+']>>'));
+ for(let k=0;k<N;k++){const by=new Uint8Array(await bl[k].arrayBuffer());obj(3+k,()=>{put(`<</Type/XObject/Subtype/Image/Width ${dm[k][0]}/Height ${dm[k][1]}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${by.length}>>\nstream\n`);put(by);put('\nendstream')})}
+ pg.forEach((it,p)=>{
+  obj(pid(p),()=>put(`<</Type/Page/Parent 2 0 R/MediaBox [0 0 ${f(W)} ${f(H)}]/Resources<</XObject<<${it.map(o=>`/I${o.k} ${3+o.k} 0 R`).join(' ')}>>>>/Contents ${pid(p)+1} 0 R>>`));
+  const c=it.map(o=>`q ${f(ws[o.k])} 0 0 ${f(hs[o.k])} ${f((W-ws[o.k])/2)} ${f(H-o.y-hs[o.k])} cm /I${o.k} Do Q`).join('\n');
+  obj(pid(p)+1,()=>put(`<</Length ${c.length}>>\nstream\n${c}\nendstream`))});
+ const M=3+N+2*P,xs=len;put(`xref\n0 ${M}\n0000000000 65535 f \n`);for(let n=1;n<M;n++)put(String(offs[n]).padStart(10,'0')+' 00000 n \n');
+ put(`trailer\n<</Size ${M}/Root 1 0 R>>\nstartxref\n${xs}\n%%EOF`);
+ return new Blob(parts,{type:'application/pdf'})}
 async function dlf(fn,data){const okT=()=>{toast('已產生');if(MJF)setTimeout(()=>toast(`有 ${MJF} 個算式無法轉成圖片，匯出檔內會是原始文字`),2400)};try{const c=window.claude&&await claude.use('downloads');if(!c)throw 0;await c.save({filename:fn,data});okT()}
  catch(e){if(e&&e.code=='declined')return;if(e&&e.code){toast('無法儲存：'+(e.message||e.code));return}try{const a=document.createElement('a');a.href=URL.createObjectURL(data instanceof Blob?data:new Blob([data]));a.download=fn;a.click();okT()}catch(x){toast('此環境無法下載檔案')}}}
 async function svgPng(s){const r=s.getBoundingClientRect(),w=Math.ceil(r.width),h=Math.ceil(r.height);if(!w)return null;
