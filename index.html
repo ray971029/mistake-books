@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-Hant"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>window.PWA=true</script>
 <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#141816" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
@@ -90,9 +91,9 @@ mjx-container{max-width:100%;overflow-x:auto;overflow-y:hidden}
 .bar{margin:8px 0}.bl2{display:flex;justify-content:space-between;font-size:14px}.bt{height:10px;background:var(--bd);border-radius:6px;overflow:hidden;margin-top:4px}.bt div{height:100%;border-radius:6px}
 .stk{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--bd)}.stk div{height:100%}
 .wk{display:flex;align-items:flex-end;gap:6px;height:96px}.wk div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;font-size:12px;color:var(--mu)}.wk i{display:block;width:100%;background:var(--ac);border-radius:4px 4px 0 0}
-#ob{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:30;display:flex;align-items:flex-end;justify-content:center}
-#ob .sh{background:var(--card);color:var(--tx);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:22px 20px calc(18px + env(safe-area-inset-bottom,0px));max-height:90vh;overflow:auto}
-@media(min-width:700px){#ob{align-items:center}#ob .sh{border-radius:22px}}
+#ob,#pi{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:30;display:flex;align-items:flex-end;justify-content:center}
+#ob .sh,#pi .sh{background:var(--card);color:var(--tx);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:22px 20px calc(18px + env(safe-area-inset-bottom,0px));max-height:90vh;overflow:auto}
+@media(min-width:700px){#ob,#pi{align-items:center}#ob .sh,#pi .sh{border-radius:22px}}#pi{z-index:29}
 .obe{font-size:44px;line-height:1.2}.obh{font-size:20px;font-weight:700;margin:6px 0 8px}.obp{color:var(--mu);font-size:15px;line-height:1.7;margin:4px 0}.obp b{color:var(--tx)}
 .dots{display:flex;gap:6px;justify-content:center;margin:16px 0}.dots i{width:7px;height:7px;border-radius:4px;background:var(--bd);transition:width .2s}.dots i.on{background:var(--ac);width:20px}
 </style></head>
@@ -389,7 +390,7 @@ const OB=[
 let OBI=0;
 function obSeen(){try{return localStorage.getItem('ob')=='1'}catch(e){return true}}
 function obShow(){OBI=0;obDraw()}
-function obEnd(){const o=$('#ob');o&&o.remove();try{localStorage.setItem('ob','1')}catch(e){}}
+function obEnd(){const o=$('#ob');o&&o.remove();try{localStorage.setItem('ob','1')}catch(e){}setTimeout(instNudge,400)}
 function obGo(d){OBI=Math.max(0,Math.min(OB.length-1,OBI+d));obDraw()}
 function obDraw(){let o=$('#ob');if(!o){o=document.createElement('div');o.id='ob';document.body.appendChild(o)}
  const s=OB[OBI],last=OBI==OB.length-1;
@@ -397,9 +398,26 @@ function obDraw(){let o=$('#ob');if(!o){o=document.createElement('div');o.id='ob
  <div class=dots>${OB.map((_,k)=>`<i class="${k==OBI?'on':''}"></i>`).join('')}</div>
  <div class=row style="justify-content:space-between"><button class=ghost onclick="${OBI?'obGo(-1)':'obEnd()'}">${OBI?'上一步':'略過'}</button><button class=btn onclick="${last?'obEnd()':'obGo(1)'}">${last?'開始使用':'下一步'}</button></div></div>`}
 let DP=null;
-addEventListener('beforeinstallprompt',e=>{e.preventDefault();DP=e;if(V.v=='set')render()});
-addEventListener('appinstalled',()=>{DP=null;toast('已安裝到主畫面');if(V.v=='set')render()});
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();DP=e;if(V.v=='set')render();setTimeout(instNudge,600)});
+addEventListener('appinstalled',()=>{DP=null;piClose();toast('已安裝到主畫面');if(V.v=='set')render()});
 const isSA=()=>{try{return matchMedia('(display-mode: standalone)').matches||navigator.standalone}catch(e){return false}};
+const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform=='MacIntel'&&navigator.maxTouchPoints>1);
+function piSnoozed(){try{const v=localStorage.getItem('pi');return v=='never'||(!!v&&Date.now()-(+v)<3*864e5)}catch(e){return false}}
+function piSet(v){try{localStorage.setItem('pi',v)}catch(e){}}
+function piClose(){const o=$('#pi');o&&o.remove()}
+function piLater(){piSet(String(Date.now()));piClose()}
+function piNever(){piSet('never');piClose();toast('之後想安裝，可以到「設定 → 安裝到主畫面」')}
+async function piInstall(){const e=DP;piClose();if(!e)return;DP=null;let r;try{e.prompt();r=await e.userChoice}catch(x){}
+ if(r&&r.outcome=='accepted')toast('正在安裝…');else piSet(String(Date.now()))}
+function instNudge(){
+ if(!window.PWA||isSA()||piSnoozed()||$('#pi')||$('#ob'))return;
+ const ios=isIOS();if(!DP&&!ios)return;
+ const o=document.createElement('div');o.id='pi';
+ o.innerHTML=`<div class=sh role=dialog aria-modal=true><div class=row style="gap:14px;flex-wrap:nowrap;align-items:center"><img src="icons/icon-192.png" width=56 height=56 alt="" style="border-radius:14px;flex:none"><div><div class=obh style="margin:0">把錯題本安裝到主畫面</div><div class=obp style="margin:2px 0 0">像 App 一樣從主畫面開啟，也能離線使用。</div></div></div>`
+ +(DP?'':`<div class=obp style="margin-top:12px">請點瀏覽器的「分享」圖示（方框加向上箭頭），再選 <b>加入主畫面</b>。</div>`)
+ +`<div class=row style="justify-content:space-between;margin-top:18px"><button class=ghost onclick="piLater()">${DP?'稍後再說':'知道了'}</button>${DP?'<button class=btn onclick="piInstall()">安裝</button>':''}</div>
+ <div style="text-align:center;margin-top:10px"><button class=ghost style="border:0;color:var(--mu);font-size:13px" onclick="piNever()">不再提醒</button></div></div>`;
+ document.body.appendChild(o)}
 async function doInstall(){if(!DP)return;DP.prompt();try{await DP.userChoice}catch(e){}DP=null;render()}
 function instForm(){if(isSA())return'';const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform=='MacIntel'&&navigator.maxTouchPoints>1);
  return `<h3>安裝到主畫面</h3>`+(DP?`<p class=mu>安裝後可以像一般 App 一樣從主畫面開啟，也能離線使用。</p><div class=acts style="margin-top:0"><button class=btn onclick="doInstall()">安裝</button></div>`
@@ -547,7 +565,7 @@ function render(){
   const on=k==V.v||(k=='list'&&(V.v=='detail'||V.v=='trash'))||(k=='new'&&V.v=='form'&&!D.id);
   return `<button class="${on?'on':''}" onclick="${k=='new'?'edit()':k=='exp'?"X.only=0;go('exp')":`go('${k}')`}"><span class=ni>${e}</span>${l}</button>`}).join('');
  typeset()}
-edit();load().then(()=>{if(V.v=='form'&&!D.id&&!D.q&&!D.qi.length)edit();else render();if(!obSeen())obShow();if(isSA())try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}});
+edit();load().then(()=>{if(V.v=='form'&&!D.id&&!D.q&&!D.qi.length)edit();else render();if(!obSeen())obShow();else setTimeout(instNudge,900);if(isSA())try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}});
 </script>
 <script src="vendor/html2canvas.min.js"></script>
 <script src="vendor/jszip.min.js"></script>
