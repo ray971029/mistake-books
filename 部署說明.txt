@@ -1,0 +1,40 @@
+錯題本 PWA 部署說明
+====================
+
+這個資料夾是一個完整的 PWA（可安裝、可離線的網頁 App）：
+  index.html            主程式
+  manifest.webmanifest  安裝資訊（名稱、圖示、顏色）
+  sw.js                 service worker（離線快取）
+  icons/                App 圖示
+  vendor/               離線用的程式庫（算式、Word/zip 匯出、圖片匯出）
+
+【一、放到網路上（必須是 HTTPS）】
+把整個資料夾的內容原封不動上傳到任一靜態網站空間即可，例如：
+  - GitHub Pages：新增 repo，把這些檔案放進去，Settings → Pages 開啟
+  - Netlify：到 app.netlify.com/drop，把整個資料夾拖進去
+  - Cloudflare Pages：建立專案，上傳資料夾
+放在子路徑（例如 https://帳號.github.io/mistakes/）也可以，路徑都是相對的。
+
+【二、安裝到裝置】
+  - Android Chrome：開啟網址 → 選單 → 「安裝應用程式」（或用 App 內 設定 → 安裝到主畫面）
+  - iPhone/iPad Safari：開啟網址 → 分享 → 「加入主畫面」
+  - 電腦 Chrome／Edge：網址列右側的安裝圖示
+
+【三、把舊資料搬過來】
+資料存在各個「網址」自己的瀏覽器儲存空間，所以新網址不會看到舊版的題目。
+  1. 在舊版：設定 → 匯出備份
+  2. 在新網址（或安裝好的 App）：右上角 📥 或 設定 → 匯入備份
+API key 不在備份檔裡，要在新版的 設定 重新輸入。
+
+【四、在電腦上先試試看】
+在這個資料夾打開終端機：  python3 -m http.server 8000
+瀏覽器開 http://localhost:8000 （localhost 視為安全環境，可以註冊 service worker 與安裝）。
+直接雙擊 index.html（file://）無法使用離線與安裝功能。
+
+【五、更新版本】
+用新檔案覆蓋舊檔案。sw.js 裡的版本編號有變，裝置下次開啟會在背景更新，
+再開一次就是新版（畫面會提示「有新版本，下次開啟會自動套用」）。
+
+【六、注意】
+  - 請定期 設定 → 匯出備份。清除瀏覽器資料、解除安裝 App，都會讓題目消失。
+  - AI 解題要連外網，離線時不能用；其他功能離線都能用。
