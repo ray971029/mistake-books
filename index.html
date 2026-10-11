@@ -66,7 +66,7 @@ mjx-container{max-width:100%;overflow-x:auto;overflow-y:hidden}
 .paper .h2{width:50%;height:44px}.paper .h3{height:56px}.paper .h4{height:44px}
 .paper h2{font-size:13px;margin:0 0 4px}.paper h2 small{font-weight:400;color:#666}
 .paper .l{margin:2px 0;font-weight:700;color:#1f7a5c}
-.paper .q img:not(.mi){display:block;margin:6px 0;width:auto;height:auto;max-width:100%;object-fit:contain}.paper .q tr:first-child img:not(.mi){max-height:230px}.paper .q tr+tr img:not(.mi){max-height:170px}
+.paper .q img:not(.mi){display:block;margin:6px 0;width:auto;height:auto;max-width:100%;object-fit:contain}.paper .q tr:first-child img:not(.mi){max-height:var(--qh,189px)}.paper .q tr+tr img:not(.mi){max-height:170px}
 #cr{position:fixed;inset:0;background:#111;z-index:20;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
 #crs{flex:1;position:relative;touch-action:none;overflow:hidden}
 #cri{position:absolute;user-select:none;-webkit-user-drag:none;pointer-events:none}
@@ -207,10 +207,10 @@ function pvHTML(i,m){
   cl=(t,x,a,c)=>`<p class=l${c?' style="color:#c0392b"':''}>${t}</p>${tx(x)}${im(a)}`,
   td=(c,k,sp)=>`<td${sp?' colspan=2':''}${k?` class=${k}`:''}>${c}</td>`,one=(c,k)=>`<tr>${td(c,k,1)}</tr>`,
   bl=`<div style="height:${90+(i.c2?(i.n2||3):0)*26}px"></div>`;
- return '<table class="q eq">'+one(`<h2><small>${hdT(i)}</small></h2>`+tx(i.q)+im(i.qi))+(m==3?
+ return '<table class="q eq">'+one(`<h2><small>${hdT(i)}</small></h2>`+txq(i.q)+im(i.qi))+(m==3?
   `<tr>${td(cl('正確答案',i.ans),'h2')}${td(cl('自己選的答案',i.mine,0,1),'h2')}</tr>`
   +one(`<p class=l style="color:#c0392b">當時思路與錯誤原因</p><div style="min-height:${(i.c1?(i.n1||3):0)*26}px">${tx(i.th)}${im(i.ti)}</div>`,'h4')
-  +one(`<p class=l>詳解／最佳解</p><div class=ex>${tx(cpx(i.ex))}${im(i.ei)}</div>`,'h3')+(rpOn()?one(`<p class=l>再練一次</p>${rqOn()?tx(i.q)+im(i.qi):''}${bl}`,'bz'):'')
+  +one(`<p class=l>詳解／最佳解</p><div class=ex>${tx(cpx(i.ex))}${im(i.ei)}</div>`,'h3')+(rpOn()?one(`<p class=l>再練一次</p>${rqOn()?txq(i.q)+im(i.qi):''}${bl}`,'bz'):'')
   :one(`<p class=l>作答區</p>${bl}`,'bz'))+'</table>'}
 function vDetail(){
  const i=S.items.find(x=>x.id==V.id);if(!i){V.v='list';return vList()}
@@ -294,9 +294,11 @@ function scanify(cv){
    const v=L[y*w+x]/b<.8?0:255,o=(y*w+x)*4;d[o]=d[o+1]=d[o+2]=v}}
  g.putImageData(id,0,0)}
 const lsg=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
-const rpOn=()=>lsg('rp')=='1',rqOn=()=>lsg('rqs')!='0';
+const rpOn=()=>lsg('rp')=='1',rqOn=()=>lsg('rqs')!='0',qhCm=()=>lsg('qh')=='3'?3:5,qhPx=()=>Math.round(qhCm()*37.795);
+function qhApply(){document.documentElement.style.setProperty('--qh',qhPx()+'px')}qhApply();
+function setQH(v){try{localStorage.setItem('qh',v);toast('已儲存')}catch(e){toast('無法儲存設定')}qhApply()}
 function setRP(k,v){try{localStorage.setItem(k,v?'1':'0');toast('已儲存')}catch(e){toast('無法儲存設定')}render()}
-function rpForm(){return `<h3>匯出版面</h3><label class=ck><input type=checkbox ${rpOn()?'checked':''} onchange="setRP('rp',this.checked)"><span>匯出「完整錯題本」時，加上「再練一次」欄位</span></label>${rpOn()?`<label class=ck style="margin-top:8px"><input type=checkbox ${rqOn()?'checked':''} onchange="setRP('rqs',this.checked)"><span>「再練一次」欄位內附上題目（方便直接重做）</span></label>`:''}<p class=mu style="margin:6px 0 0">預設不加，版面比較精簡。練習卷的「作答區」不受影響。</p>`}
+function rpForm(){return `<h3>匯出版面</h3><label class=ck><input type=checkbox ${rpOn()?'checked':''} onchange="setRP('rp',this.checked)"><span>匯出「完整錯題本」時，加上「再練一次」欄位</span></label>${rpOn()?`<label class=ck style="margin-top:8px"><input type=checkbox ${rqOn()?'checked':''} onchange="setRP('rqs',this.checked)"><span>「再練一次」欄位內附上題目（方便直接重做）</span></label>`:''}<p class=mu style="margin:6px 0 0">預設不加，版面比較精簡。練習卷的「作答區」不受影響。</p><label style="margin-top:12px">題目圖片的最大高度</label><select onchange="setQH(this.value)"><option value=3 ${qhCm()==3?'selected':''}>3 公分</option><option value=5 ${qhCm()==5?'selected':''}>5 公分</option></select><p class=mu style="margin:6px 0 0">匯出和預覽時，題目欄的圖片不會超過這個高度（等比例縮小，不會變形）。詳解與其他欄位的圖片不受影響。</p>`}
 const IQ={s:[1000,.72,'省空間（約 1000 像素）'],m:[1600,.82,'標準（約 1600 像素）'],h:[2400,.9,'高畫質（約 2400 像素）']};
 function iq(){try{const v=localStorage.getItem('iq');return IQ[v]?v:'h'}catch(e){return'h'}}
 function setIQ(v){try{localStorage.setItem('iq',v);toast('已儲存')}catch(e){toast('無法儲存設定')}}
@@ -310,6 +312,7 @@ async function saveItem(){
  else S.items[S.items.findIndex(x=>x.id==D.id)]=D;
  await save();go('detail',{id:D.id})}
 
+const txq=t=>t?`<div style="line-height:1.4">${rt(t)}</div>`:'';
 function donut(parts,big,small){
  const ps=parts.filter(x=>x.n>0),tot=ps.reduce((a,x)=>a+x.n,0)||1,r=15.9155,g=ps.length>1?.8:0;let cum=0;
  const segs=ps.map(x=>{const pc=x.n*100/tot,d=`${Math.max(.01,pc-g)} ${100-pc+g}`,o=25-cum-g/2;cum+=pc;
@@ -540,9 +543,9 @@ async function doExp(){
   two=(a,b)=>`<tr>${td(a,'h2')}${td(b,'h2')}</tr>`,one=(c,k)=>`<tr>${td(c,k,1)}</tr>`,
   th=i=>`<p class=l style="color:#c0392b">當時思路與錯誤原因</p><div style="min-height:${(i.c1?(i.n1||3):0)*26}px">${tx(i.th)}${im(i.ti)}</div>`,
   r2=i=>two(cl('正確答案',i.ans),cl('自己選的答案',i.mine,0,1))+one(th(i),'h4')+one(`<p class=l>詳解／最佳解</p><div class=ex>${tx(cpx(i.ex))}${im(i.ei)}</div>`,'h3');
- let h=l.map((i,n)=>'<table class="q eq">'+one(head(i,n+1)+tx(i.q)+im(i.qi))+(m==3?r2(i)+(rpOn()?one(`<p class=l>再練一次</p>${rqOn()?tx(i.q)+im(i.qi):''}${ln(i)}`,'bz'):''):one(`<p class=l>作答區</p>${ln(i)}`,'bz'))+'</table>').join('');
+ let h=l.map((i,n)=>'<table class="q eq">'+one(head(i,n+1)+txq(i.q)+im(i.qi))+(m==3?r2(i)+(rpOn()?one(`<p class=l>再練一次</p>${rqOn()?txq(i.q)+im(i.qi):''}${ln(i)}`,'bz'):''):one(`<p class=l>作答區</p>${ln(i)}`,'bz'))+'</table>').join('');
  if(m==2)h+='<div class=pb></div><h1>參考答案與詳解</h1>'+l.map((i,n)=>'<table class=q>'+one(head(i,n+1))+r2(i)+'</table>').join('');
- const css='@page{size:A4;margin:12mm 12mm 12mm 15mm}body{font:11pt/1.7 "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;color:#000;width:183mm;margin:0 auto;padding:12px 0}@media print{body{width:auto;padding:0}}h1{font-size:18pt}h2{font-size:13pt;margin:0 0 6px}h2 small{font-weight:400;color:#666;font-size:10pt}.q{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;border:1.5px solid #333;border-radius:14px;margin:0 0 32px;page-break-inside:avoid;break-inside:avoid}.q td{padding:8px 16px;vertical-align:top;overflow-wrap:anywhere;min-width:0;overflow:hidden}.q tr+tr td{border-top:1.5px solid #333}.q td.h2:first-child{border-right:1.5px solid #333}.h2{width:50%;height:44px}.h3{height:56px}.h4{height:44px}.q img:not(.mi){display:block;margin:6px 0;width:auto;height:auto;max-width:100%;object-fit:contain}.q tr:first-child img:not(.mi){max-height:230px}.q tr+tr img:not(.mi){max-height:170px}img.mi{display:inline;vertical-align:middle;max-width:100%;height:auto!important}img.mi.dm{display:block;margin:3px auto}.l{margin:2px 0;font-weight:700;color:#1f7a5c}.bl{height:90px}.pb{page-break-after:always}.ex{font-size:.91em;line-height:1.4}.ex img.dm{margin:3px auto!important}';
+ const css='@page{size:A4;margin:12mm 12mm 12mm 15mm}body{font:11pt/1.7 "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;color:#000;width:183mm;margin:0 auto;padding:12px 0}@media print{body{width:auto;padding:0}}h1{font-size:18pt}h2{font-size:13pt;margin:0 0 6px}h2 small{font-weight:400;color:#666;font-size:10pt}.q{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;border:1.5px solid #333;border-radius:14px;margin:0 0 32px;page-break-inside:avoid;break-inside:avoid}.q td{padding:8px 16px;vertical-align:top;overflow-wrap:anywhere;min-width:0;overflow:hidden}.q tr+tr td{border-top:1.5px solid #333}.q td.h2:first-child{border-right:1.5px solid #333}.h2{width:50%;height:44px}.h3{height:56px}.h4{height:44px}.q img:not(.mi){display:block;margin:6px 0;width:auto;height:auto;max-width:100%;object-fit:contain}.q tr:first-child img:not(.mi){max-height:'+qhPx()+'px}.q tr+tr img:not(.mi){max-height:170px}img.mi{display:inline;vertical-align:middle;max-width:100%;height:auto!important}img.mi.dm{display:block;margin:3px auto}.l{margin:2px 0;font-weight:700;color:#1f7a5c}.bl{height:90px}.pb{page-break-after:always}.ex{font-size:.91em;line-height:1.4}.ex img.dm{margin:3px auto!important}';
  const d=document.createElement('div');d.style.cssText='position:absolute;left:-9999px;top:0;width:680px';d.innerHTML=h;document.body.appendChild(d);
  try{if(window.MathJax&&MathJax.typesetPromise){await MathJax.typesetPromise([d]);await raster(d)}}catch(e){}
  if(X.t=='jpg'||X.t=='zip'||X.t=='pdf'){try{
@@ -603,11 +606,11 @@ async function svgPng(s){const r=s.getBoundingClientRect(),w=Math.ceil(r.width),
  const cv=document.createElement('canvas');cv.width=w*2;cv.height=h*2;const g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);g.drawImage(im,0,0,cv.width,cv.height);return{u:cv.toDataURL('image/png'),w,h}}
 async function mkDocx(l,m){
  await needLib('JSZip');if(!window.JSZip)throw new Error('JSZip 未載入，請確認網路或重新整理後再試');
- const media=[];let id=0,acc=0,dup=0,sz=0;const clone=x=>x.replace(/<wp:docPr id="\d+" name="p\d+"\/>/g,()=>{const k=++dup;return `<wp:docPr id="${900000+k}" name="d${k}"/>`});const E=9525;
+ const media=[];let id=0,acc=0,dup=0,sz=0,lh=0;const clone=x=>x.replace(/<wp:docPr id="\d+" name="p\d+"\/>/g,()=>{const k=++dup;return `<wp:docPr id="${900000+k}" name="d${k}"/>`});const E=9525;
  const run=(u,w,h)=>{const k=++id,ext=u.startsWith('data:image/png')?'png':'jpeg',cx=Math.round(w*E),cy=Math.round(h*E);media.push({k,ext,b:u.split(',')[1]});
   return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${k}" name="p${k}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${k}" name="p${k}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rM${k}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`};
  const txt=t=>t.split('\n').map((x,i)=>(i?'<w:r><w:br/></w:r>':'')+x.split('**').map((y,k)=>y?`<w:r>${k%2||sz?`<w:rPr>${k%2?'<w:b/>':''}${sz?`<w:sz w:val="${sz}"/>`:''}</w:rPr>`:''}<w:t xml:space="preserve">${esc(y)}</w:t></w:r>`:'').join('')).join('');
- const par=(r,c)=>`<w:p><w:pPr><w:keepNext/><w:spacing w:before="0" w:after="${sz?20:60}"${sz?' w:line="260" w:lineRule="auto"':''}/>${c?'<w:jc w:val="center"/>':''}</w:pPr>${r}</w:p>`;
+ const par=(r,c)=>`<w:p><w:pPr><w:keepNext/><w:spacing w:before="0" w:after="${sz?20:60}"${sz?' w:line="260" w:lineRule="auto"':lh?` w:line="${lh}" w:lineRule="auto"`:''}/>${c?'<w:jc w:val="center"/>':''}</w:pPr>${r}</w:p>`;
  const mj=async(tex,d)=>{try{const n=await MathJax.tex2svgPromise(tex,{display:!!d});const b=document.createElement('div');b.style.cssText='position:absolute;left:-9999px;top:0';b.appendChild(n);document.body.appendChild(b);
   const o=await svgPng(n.querySelector('svg'));b.remove();if(d&&o)acc+=o.h*15+120;if(!o){MJF++;return txt(tex)}const w2=o.w*(sz||22)/24,h2=o.h*(sz||22)/24,k=Math.min(1,560/w2);return run(o.u,Math.round(w2*k),Math.round(h2*k))}catch(e){MJF++;return txt(tex)}};
  const P=async t=>{if(!t)return'';let o='',r='',last=0,mt;const re=/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$|\\\(([\s\S]+?)\\\)/g;
@@ -628,7 +631,7 @@ async function mkDocx(l,m){
  let b=T('錯題本'+(X.f=='全部'?'':'－'+esc(X.f)),36);
  const R2=async i=>two(1000,L('正確答案')+await P(i.ans),L('自己選的答案','C0392B')+await P(i.mine)),
   R3=async (i,hq)=>full(Math.max(1000+(i.c1?(i.n1||3):0)*400,Math.round((hq||0)/2)),L('當時思路與錯誤原因','C0392B')+await P(i.th)+await PI(i.ti))+full(Math.max(1400,hq||0),L('詳解／最佳解')+(sz=20,await P(cpx(i.ex)))+(sz=0,'')+await PI(i.ei));
- for(let n=0;n<l.length;n++){const i=l[n],a0=acc,qx=await P(i.q)+await PI(i.qi,230),
+ for(let n=0;n<l.length;n++){const i=l[n],a0=acc,qx=(lh=336,await P(i.q))+(lh=0,'')+await PI(i.qi,qhPx()),
    nl=(i.q||'').split('\n').reduce((z,t)=>z+Math.max(1,Math.ceil(t.replace(/\$[^$]*\$/g,'口').length/38)),0),hq=(i.q||(i.qi&&i.qi.length))?600+nl*340+(acc-a0):0;
   const S3=hq+1000+Math.max(1000+(i.c1?(i.n1||3):0)*400,Math.round(hq/2))+Math.max(1400,hq),f3=Math.max(hq,6900-S3),f1=Math.max(hq,6900-hq);
   b+=tb(full(0,HD(i,n+1)+qx)+(m==3?await R2(i)+await R3(i,hq)+(rpOn()?full(f3,L('再練一次')+(rqOn()?clone(qx):'')+BL(i,rqOn()?0:hq)):''):full(f1,L('作答區')+BL(i,hq))))}
