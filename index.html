@@ -364,13 +364,24 @@ function fillQ(t){if(D.q.trim()){D.q=confirm('題目欄已經有文字。\n按�
 function fillSolve(ans,body){if(ans&&!D.ans.trim()){D.ans=ans;$('#t_ans').value=D.ans;ED.ans=false;upd('ans')}
  D.ex=(D.ex.trim()?D.ex.trim()+'\n\n':'')+'【AI 解題】\n'+body.trim();
  {const t=$('#t_ex');t.value=D.ex;t.style.height=Math.min(420,Math.max(t.offsetHeight,t.scrollHeight+4))+'px'}ED.ex=false;upd('ex')}
+function parseBoth(t){
+ const mk=k=>new RegExp('(?:^|\\n)[ \\t>#*_【\\[「（(]*(?:'+k+')[ \\t*_】\\]」）)]*[:：]?[ \\t*_】\\]」]*','');
+ const ma=mk('正確答案|正确答案').exec(t);if(!ma)return null;
+ const mq=mk('題目|题目').exec(t.slice(0,ma.index+1));
+ const q=(mq?t.slice(mq.index+mq[0].length,ma.index):t.slice(0,ma.index)).trim();
+ const rest=t.slice(ma.index+ma[0].length),me=mk('詳解|详解|解析|詳細解說').exec(rest);
+ let ans,ex;
+ if(me){ans=rest.slice(0,me.index);ex=rest.slice(me.index+me[0].length)}
+ else{const k=rest.indexOf('\n');ans=k<0?rest:rest.slice(0,k);ex=k<0?'':rest.slice(k+1)}
+ ans=ans.replace(/[*_]/g,'').trim().split('\n')[0].trim();
+ return{q,ans,ex:ex.trim()}}
 async function aiBoth(){
  if(!D.qi.length)return toast('請先在題目欄加入圖片');
  const b=$('#ocb'),b2=$('#ocb2'),st=$('#ocs');b.disabled=b2.disabled=true;st.textContent='辨識＋解題中…';
- const pr='請先把圖片中的題目轉成文字，再用繁體中文解答。請自行從題目內容判斷年級、考試類型與出處，用符合該程度的方式解釋（科目：'+D.sub+'）。\n\n輸出格式（嚴格遵守；不要前言、不要結語，越精簡越好），依序三段，每段開頭的標記要獨立成一行：\n題目：\n（題目轉成文字。保留完整題幹；選擇題的選項各佔一行寫成「(A) …」「(B) …」；填充題空格用「____」；圖形或座標圖無法轉成文字時寫「［見圖］」；表格用一行一列、欄位以「｜」分隔；圖片上的手寫筆記、劃記、圈選、答案一律忽略。）\n正確答案：…（多選題寫成 (A)(C)(D) 這種形式）\n詳解：\n．選擇題（單選或多選）：每個選項一行，寫成「(A) ○：原因」或「(A) ×：原因」，依 A、B、C… 順序逐項說明，每項原因一到兩句。\n．填充、計算或問答題：用 1. 2. 3. 分步驟，每步只寫關鍵算式與一句說明。\n\n不要使用 Markdown 符號（不要 **粗體**、# 標題、程式碼區塊）。數學、物理、化學的式子與符號一律用 LaTeX：行內用 $…$，獨立一行用 $$…$$，符號必須成對，中文標點不要放進公式裡；化學式寫成 $\\mathrm{H_2O}$ 這種形式，不要使用 \\ce 或 \\require。'+solveCtx();
- try{const t=cleanAI(await aiAsk(pr,[...D.qi,...D.ti])).trim(),m=t.match(/^\s*題目[:：]\s*\n?([\s\S]*?)\n\s*正確答案[:：]\s*(.+)\n+\s*詳解[:：]\s*([\s\S]*)$/);
-  if(!m)throw new Error('AI 回覆的格式不符，請再按一次，或改按「AI 辨識題目」');
-  fillQ(m[1].trim());fillSolve(m[2].trim(),m[3]);st.textContent='完成（AI 可能出錯，請自行核對題目與詳解）'}
+ const pr='請先把圖片中的題目轉成文字，再用繁體中文解答。請自行從題目內容判斷年級、考試類型與出處，用符合該程度的方式解釋（科目：'+D.sub+'）。\n\n輸出格式（嚴格遵守；不要前言、不要結語，越精簡越好），依序三段，用下面三個標記分隔，標記要一字不差照寫、各自獨立成一行，不要加粗體或其他符號，也不要改寫標記文字：\n【題目】\n（題目轉成文字。保留完整題幹；選擇題的選項各佔一行寫成「(A) …」「(B) …」；填充題空格用「____」；圖形或座標圖無法轉成文字時寫「［見圖］」；表格用一行一列、欄位以「｜」分隔；圖片上的手寫筆記、劃記、圈選、答案一律忽略。）\n【正確答案】\n…（只寫答案本身；多選題寫成 (A)(C)(D) 這種形式）\n【詳解】\n．選擇題（單選或多選）：每個選項一行，寫成「(A) ○：原因」或「(A) ×：原因」，依 A、B、C… 順序逐項說明，每項原因一到兩句。\n．填充、計算或問答題：用 1. 2. 3. 分步驟，每步只寫關鍵算式與一句說明。\n\n不要使用 Markdown 符號（不要 **粗體**、# 標題、程式碼區塊）。數學、物理、化學的式子與符號一律用 LaTeX：行內用 $…$，獨立一行用 $$…$$，符號必須成對，中文標點不要放進公式裡；化學式寫成 $\\mathrm{H_2O}$ 這種形式，不要使用 \\ce 或 \\require。'+solveCtx();
+ try{const t=cleanAI(await aiAsk(pr,[...D.qi,...D.ti])).trim(),r=parseBoth(t);
+  if(!r){if(!t||!confirm('AI 的回覆格式無法自動拆開。\n要把整段回覆放進「詳解」欄嗎？（你可以再自己整理）'))throw new Error('AI 回覆的格式不符，請再按一次，或改按「AI 辨識題目」');fillSolve('',t);st.textContent='已把整段回覆放進詳解欄'}
+  else{if(r.q)fillQ(r.q);fillSolve(r.ans,r.ex||'（AI 沒有提供詳解）');st.textContent='完成（AI 可能出錯，請自行核對題目與詳解）'}}
  catch(e){st.textContent='失敗：'+e.message}
  b.disabled=b2.disabled=false}
 function aiForm(){const c=aiCfg(),p=c.p||'anthropic';
@@ -394,7 +405,7 @@ async function aiAsk(prompt,imgs){
  const p=c.p||'anthropic',m=c.m||AIM[p],im=(imgs||[]).map(u=>({mt:u.slice(5,u.indexOf(';')),d:u.split(',')[1],u}));
  let url,h={'content-type':'application/json'},body,get;
  if(p=='anthropic'){url='https://api.anthropic.com/v1/messages';h['x-api-key']=c.k;h['anthropic-version']='2023-06-01';h['anthropic-dangerous-direct-browser-access']='true';
-  body={model:m,max_tokens:2000,messages:[{role:'user',content:[...im.map(x=>({type:'image',source:{type:'base64',media_type:x.mt,data:x.d}})),{type:'text',text:prompt}]}]};get=j=>j.content.map(x=>x.text||'').join('')}
+  body={model:m,max_tokens:4096,messages:[{role:'user',content:[...im.map(x=>({type:'image',source:{type:'base64',media_type:x.mt,data:x.d}})),{type:'text',text:prompt}]}]};get=j=>j.content.map(x=>x.text||'').join('')}
  else if(p=='openai'){url='https://api.openai.com/v1/chat/completions';h.authorization='Bearer '+c.k;
   body={model:m,messages:[{role:'user',content:[{type:'text',text:prompt},...im.map(x=>({type:'image_url',image_url:{url:x.u}}))]}]};get=j=>j.choices[0].message.content}
  else{url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(m)+':generateContent';h['x-goog-api-key']=c.k;
