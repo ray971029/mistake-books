@@ -1,5 +1,5 @@
-// 錯題本 service worker：離線快取（版本 09c745562a）
-const CACHE='mn-09c745562a';
+// 錯題本 service worker：離線快取（版本 f653da69f5）
+const CACHE='mn-f653da69f5';
 const SHELL=["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/apple-touch-icon.png", "icons/icon.svg", "vendor/mathjax-tex-svg.js", "vendor/jszip.min.js", "vendor/html2canvas.min.js"];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>Promise.all(SHELL.map(u=>c.add(new Request(u,{cache:'reload'}))))).then(()=>self.skipWaiting()));
