@@ -1,8 +1,9 @@
-// 錯題本 service worker：離線快取（版本 f653da69f5）
-const CACHE='mn-f653da69f5';
+// 錯題本 service worker：離線快取（版本 7d6367e9b9）
+const CACHE='mn-7d6367e9b9';
 const SHELL=["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/apple-touch-icon.png", "icons/icon.svg", "vendor/mathjax-tex-svg.js", "vendor/jszip.min.js", "vendor/html2canvas.min.js"];
 self.addEventListener('install',e=>{
-  e.waitUntil(caches.open(CACHE).then(c=>Promise.all(SHELL.map(u=>c.add(new Request(u,{cache:'reload'}))))).then(()=>self.skipWaiting()));
+  // 個別檔案抓不到（例如檔名打錯）不會讓整個安裝失敗；只要主頁面成功快取就能離線開啟，其餘檔案之後用到時會自動補進快取
+  e.waitUntil((async()=>{const c=await caches.open(CACHE);const rs=await Promise.allSettled(SHELL.map(u=>c.add(new Request(u,{cache:'reload'}))));if(rs[0].status!=='fulfilled'||rs[1].status!=='fulfilled')throw new Error('主頁面無法快取');await self.skipWaiting()})());
 });
 self.addEventListener('activate',e=>{
   e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE&&k.startsWith('mn-')).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
