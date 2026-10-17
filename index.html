@@ -105,6 +105,7 @@ mjx-container{max-width:100%;overflow-x:auto;overflow-y:hidden}
 <script>
 const $=s=>document.querySelector(s);
 const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ttl=i=>(i.name&&i.name.trim())?esc(i.name.trim()):i.q?esc(i.q.replace(/\$/g,'')):'（圖片題目）';
 const hdT=i=>esc(i.sub)+(i.tags||[]).map(t=>'　#'+esc(t)).join('');
 const cpx=t=>(t||'').replace(/\n*(\$\$[\s\S]+?\$\$)\n*/g,'$1').replace(/\n{2,}/g,'\n');
 const MR=/\$\$[\s\S]+?\$\$|\$[^$\n]+?\$|\\\([\s\S]+?\\\)/g;
@@ -134,7 +135,8 @@ function typeset(el){const t=el||$('#app'),p=(window.MathJax&&MathJax.typesetPro
 function go(v,o){if(v!='list'){V.sm=0;V.pick={}}Object.assign(V,{v},o||{});render();scrollTo(0,0)}
 
 const stat=i=>i.streak>=2?'✓ 已掌握':i.tries?`練習 ${i.tries} 次`:'未練習';
-const tags=i=>`<span class=tag>${esc(i.sub)}</span><span class=st>${stat(i)}</span>`;
+const liteLbl=i=>(i.wo&&i.wo.length)?'錯誤選項 '+i.wo.map(c=>'('+c+')').join('')+' 的觀念':'錯誤選項的觀念';
+const tags=i=>`<span class=tag>${esc(i.sub)}</span>${i.lite?'<span class="tag g">簡易</span>':''}<span class=st>${stat(i)}</span>`;
 const blk=(i,k,l,ik)=>(i[k]||(ik&&i[ik].length))?`<section class="b ${k=='ans'?'ok':k=='mine'?'bad':''}"><h3>${l}</h3>${i[k]?`<div class=tx>${rt(i[k])}</div>`:''}${ik?i[ik].map(u=>`<img src="${u}">`).join(''):''}</section>`:'';
 
 function allTags(){const s=new Set();S.items.forEach(i=>(i.tags||[]).forEach(t=>s.add(t)));return[...s].sort()}
@@ -174,16 +176,16 @@ async function delItem(id,w){
 function vTrash(){const l=(S.trash||[]).slice().sort((a,b)=>b.delAt-a.delAt);
  return `<button class=back onclick="go('list')">← 返回</button><div class=row style="justify-content:space-between"><h1 style="margin:0">垃圾桶</h1>${l.length?`<button class="ghost dn" onclick="emptyTrash()">清空垃圾桶</button>`:''}</div>
  <p class=mu style="margin:8px 0">刪除的題目會先放在這裡，可以復原；按「永久刪除」才會真的消失。</p>
- ${l.length?l.map(i=>`<div class=card><div class=row>${tags(i)}</div><div class=pvt>${i.q?esc(i.q.replace(/\\$/g,'')):'（圖片題目）'}</div><div class=row style="margin-top:8px"><span class=mu style="font-size:12px">刪除於 ${new Date(i.delAt).toLocaleDateString('zh-TW')}</span><button class=ghost style="margin-left:auto" onclick="restore('${i.id}')">復原</button><button class="ghost dn" onclick="purge('${i.id}')">永久刪除</button></div></div>`).join(''):'<p class=empty>垃圾桶是空的。</p>'}`}
+ ${l.length?l.map(i=>`<div class=card><div class=row>${tags(i)}</div><div class=pvt>${ttl(i)}</div><div class=row style="margin-top:8px"><span class=mu style="font-size:12px">刪除於 ${new Date(i.delAt).toLocaleDateString('zh-TW')}</span><button class=ghost style="margin-left:auto" onclick="restore('${i.id}')">復原</button><button class="ghost dn" onclick="purge('${i.id}')">永久刪除</button></div></div>`).join(''):'<p class=empty>垃圾桶是空的。</p>'}`}
 async function restore(id){const k=(S.trash||[]).findIndex(x=>x.id==id);if(k<0)return;const it=S.trash.splice(k,1)[0];delete it.delAt;S.items.push(it);await save();toast('已復原');render()}
 async function purge(id){if(V.cp!=id){V.cp=id;toast('再按一次「永久刪除」確認，無法復原');setTimeout(()=>V.cp=null,3000);return}S.trash=S.trash.filter(x=>x.id!=id);V.cp=null;await save();render()}
 async function emptyTrash(){if(!V.ce){V.ce=1;toast('再按一次「清空垃圾桶」確認，無法復原');setTimeout(()=>V.ce=0,3000);return}S.trash=[];V.ce=0;await save();render()}
 document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.sw,.pk'))e.preventDefault()});
-const curList=()=>S.items.filter(i=>(V.f=='全部'||i.sub==V.f)&&V.tgs.every(t=>(i.tags||[]).includes(t))&&(!V.s||[i.q,i.mine,i.th,i.ans,i.ex,...(i.tags||[])].join(' ').includes(V.s))).sort((a,b)=>b.created-a.created);
+const curList=()=>S.items.filter(i=>(V.f=='全部'||i.sub==V.f)&&V.tgs.every(t=>(i.tags||[]).includes(t))&&(!V.s||[i.name,i.q,i.mine,i.th,i.ans,i.ex,...(i.tags||[])].join(' ').includes(V.s))).sort((a,b)=>b.created-a.created);
 function enterSel(id){V.sm=1;V.pick={};V.pick[id]=true;if(navigator.vibrate)navigator.vibrate(30);render()}
 async function shareSel(){
  const its=S.items.filter(i=>V.pick[i.id]);if(!its.length)return;
- const items=its.map(i=>({sid:i.sid||i.id,sub:i.sub,why:i.why||'',q:i.q,qi:i.qi||[],mine:i.mine,th:i.th,ti:i.ti||[],ans:i.ans,ex:i.ex,ei:i.ei||[],tags:i.tags||[],c1:i.c1,n1:i.n1,c2:i.c2,n2:i.n2}));
+ const items=its.map(i=>({sid:i.sid||i.id,sub:i.sub,why:i.why||'',name:i.name||'',lite:!!i.lite,wo:i.wo||[],q:i.q,qi:i.qi||[],mine:i.mine,th:i.th,ti:i.ti||[],ans:i.ans,ex:i.ex,ei:i.ei||[],tags:i.tags||[],c1:i.c1,n1:i.n1,c2:i.c2,n2:i.n2}));
  const data=JSON.stringify({type:'mistake-share',v:1,items}),fn='錯題共享-'+new Date().toISOString().slice(0,10)+'.json';
  try{const f=new File([data],fn,{type:'application/json'});
   if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'錯題共享',text:`${items.length} 題錯題，用錯題本的「匯入」(📥)加入`});toast('已共享');return}}
@@ -194,13 +196,13 @@ function togPick(id){if(V.pick[id])delete V.pick[id];else V.pick[id]=true;render
 function pickAll(){curList().forEach(i=>V.pick[i.id]=true);render()}
 function goExport(){const ids=Object.keys(V.pick);if(!ids.length)return;X.only=1;X.pick=ids;X.sel={};ids.forEach(k=>X.sel[k]=true);X.f='全部';X.tg='';V.sm=0;V.pick={};go('exp')}
 const selBar=()=>{const n=Object.keys(V.pick).length;return `<div class=selbar><button class=ghost onclick="exitSel()">取消</button><span class=mu>已選 ${n} 題</span><span class=row style="margin-left:auto"><button class=ghost onclick="pickAll()">全選</button><button class=ghost ${n?'':'disabled'} onclick="shareSel()">共享</button><button class=btn ${n?'':'disabled'} onclick="goExport()">匯出</button></span></div>`};
-const pkCard=i=>`<div class="card pk" onclick="togPick('${i.id}')" style="${V.pick[i.id]?'border-color:var(--ac);background:var(--acx)':''}"><div class=row><span style="font-size:20px">${V.pick[i.id]?'☑':'☐'}</span>${tags(i)}</div><div class=pvt>${i.q?esc(i.q.replace(/\$/g,'')):'（圖片題目）'}</div>${tagLine(i)}</div>`;
+const pkCard=i=>`<div class="card pk" onclick="togPick('${i.id}')" style="${V.pick[i.id]?'border-color:var(--ac);background:var(--acx)':''}"><div class=row><span style="font-size:20px">${V.pick[i.id]?'☑':'☐'}</span>${tags(i)}</div><div class=pvt>${ttl(i)}</div>${tagLine(i)}</div>`;
 function vList(){
- const its=S.items.filter(i=>(V.f=='全部'||i.sub==V.f)&&V.tgs.every(t=>(i.tags||[]).includes(t))&&(!V.s||[i.q,i.mine,i.th,i.ans,i.ex,...(i.tags||[])].join(' ').includes(V.s))).sort((a,b)=>b.created-a.created);
+ const its=S.items.filter(i=>(V.f=='全部'||i.sub==V.f)&&V.tgs.every(t=>(i.tags||[]).includes(t))&&(!V.s||[i.name,i.q,i.mine,i.th,i.ans,i.ex,...(i.tags||[])].join(' ').includes(V.s))).sort((a,b)=>b.created-a.created);
  const cnt=s=>S.items.filter(i=>s=='全部'||i.sub==s).length;
  return (V.sm?selBar():'')+`<div class=row style="justify-content:space-between;margin:4px 0 8px"><h1 style="margin:0">錯題本</h1><span class=row style="gap:8px"><button class=trbtn aria-label="匯入共享檔或備份" title="匯入共享檔或備份" onclick="imp()">📥</button><button class=trbtn aria-label="垃圾桶" onclick="go('trash')">🗑️${(S.trash||[]).length?' '+S.trash.length:''}</button></span></div><input id=sr placeholder="搜尋題目、詳解、標籤…" value="${esc(V.s)}" oninput="V.s=this.value;clearTimeout(tm.s);tm.s=setTimeout(()=>{render();const e=$('#sr');e.focus();e.setSelectionRange(999,999)},300)">
  <div class=chips>${['全部',...S.subjects].map(s=>`<button class="chip ${s==V.f?'on':''}" data-s="${esc(s)}" onclick="V.f=this.dataset.s;render()">${esc(s)} ${cnt(s)}</button>`).join('')}</div>${tagRow()}
- ${its.length?its.map(i=>V.sm?pkCard(i):`<div class=sw data-id="${i.id}"><div class=swb onclick="delItem('${i.id}',this.parentNode)">🗑️</div><div class=card><div class=row>${tags(i)}</div><div class=pvt>${i.q?esc(i.q.replace(/\$/g,'')):'（圖片題目）'}</div>${tagLine(i)}</div></div>`).join(''):'<p class=empty>還沒有錯題。點下方「新增」開始記錄吧！</p>'}`}
+ ${its.length?its.map(i=>V.sm?pkCard(i):`<div class=sw data-id="${i.id}"><div class=swb onclick="delItem('${i.id}',this.parentNode)">🗑️</div><div class=card><div class=row>${tags(i)}</div><div class=pvt>${ttl(i)}</div>${tagLine(i)}</div></div>`).join(''):'<p class=empty>還沒有錯題。點下方「新增」開始記錄吧！</p>'}`}
 
 function pvHTML(i,m){
  const im=a=>(a||[]).map(u=>`<img src="${u}">`).join(''),tx=t=>t?`<div>${rt(t)}</div>`:'',
@@ -208,31 +210,38 @@ function pvHTML(i,m){
   td=(c,k,sp)=>`<td${sp?' colspan=2':''}${k?` class=${k}`:''}>${c}</td>`,one=(c,k)=>`<tr>${td(c,k,1)}</tr>`,
   bl=`<div style="height:${90+(i.c2?(i.n2||3):0)*26}px"></div>`;
  return '<table class="q eq">'+one(`<h2><small>${hdT(i)}</small></h2>`+txq(i.q)+im(i.qi))+(m==3?
-  `<tr>${td(cl('正確答案',i.ans),'h2')}${td(cl('自己選的答案',i.mine,0,1),'h2')}</tr>`
+  (i.lite?one(`<p class=l style="color:#c0392b">${liteLbl(i)}</p><div class=ex>${tx(cpx(i.ex))}${im(i.ei)}</div>`,'h3'):`<tr>${td(cl('正確答案',i.ans),'h2')}${td(cl('自己選的答案',i.mine,0,1),'h2')}</tr>`
   +one(`<p class=l style="color:#c0392b">當時思路與錯誤原因</p><div style="min-height:${(i.c1?(i.n1||3):0)*26}px">${tx(i.th)}${im(i.ti)}</div>`,'h4')
-  +one(`<p class=l>詳解／最佳解</p><div class=ex>${tx(cpx(i.ex))}${im(i.ei)}</div>`,'h3')+(rpOn()?one(`<p class=l>再練一次</p>${rqOn()?txq(i.q)+im(i.qi):''}${bl}`,'bz'):'')
+  +one(`<p class=l>詳解／最佳解</p><div class=ex>${tx(cpx(i.ex))}${im(i.ei)}</div>`,'h3'))+(rpOn()?one(`<p class=l>再練一次</p>${rqOn()?txq(i.q)+im(i.qi):''}${bl}`,'bz'):'')
   :one(`<p class=l>作答區</p>${bl}`,'bz'))+'</table>'}
 function vDetail(){
  const i=S.items.find(x=>x.id==V.id);if(!i){V.v='list';return vList()}
  return `<button class=back onclick="go('list')">← 返回</button><div class=row>${tags(i)}</div>${tagLine(i)}
+ <label>題目名稱（顯示在錯題列表，留空就顯示題目開頭）</label><input value="${esc(i.name||'')}" maxlength=60 placeholder="${esc((i.q||'').replace(/\$/g,'').slice(0,20))}" onchange="renameItem('${i.id}',this.value)">
  <label>匯出預覽（大小為示意，實際依紙張而定）</label><select onchange="V.pm=this.value;render()"><option value=3 ${V.pm!=1?'selected':''}>完整錯題本</option><option value=1 ${V.pm==1?'selected':''}>練習卷</option></select>
  <div class=paper style="margin-top:10px">${pvHTML(i,V.pm==1?1:3)}</div>
  <div class=acts><button class=btn onclick="startPrac([S.items.find(x=>x.id=='${i.id}')])">再練一次</button><button class=ghost onclick="edit('${i.id}')">編輯</button><button class="ghost dn" onclick="del('${i.id}')">刪除</button></div>`}
 
+async function renameItem(id,v){const i=S.items.find(x=>x.id==id);if(!i)return;i.name=v.trim().slice(0,60);await save();toast('已儲存名稱')}
 async function del(id){if(V.cf!=id){V.cf=id;toast('再按一次「刪除」確認');setTimeout(()=>V.cf=null,3000);return}
  await delItem(id);go('list')}
 
 function edit(id){const i=id&&S.items.find(x=>x.id==id);ED={};
- D=i?JSON.parse(JSON.stringify(i)):{id:'',sub:V.f!='全部'?V.f:S.subjects[0],why:'',q:'',qi:[],mine:'',th:'',ti:[],ans:'',ex:'',ei:[],tries:0,streak:0,last:0,tags:V.tgs.slice()};D.tags=D.tags||[];go('form')}
+ D=i?JSON.parse(JSON.stringify(i)):{id:'',name:'',lite:false,wo:[],sub:V.f!='全部'?V.f:S.subjects[0],why:'',q:'',qi:[],mine:'',th:'',ti:[],ans:'',ex:'',ei:[],tries:0,streak:0,last:0,tags:V.tgs.slice()};D.tags=D.tags||[];D.wo=D.wo||[];go('form')}
 const WHYI=()=>`<label>錯誤原因（簡短，例如：公式記錯、粗心看錯）</label><input value="${esc(D.why)}" list=wl oninput="D.why=this.value"><datalist id=wl>${WHY.map(w=>`<option value="${w}">`).join('')}</datalist>`;
 const XL=(c,n,t)=>`<label class=ck style="margin:8px 0"><input type=checkbox ${D[c]?'checked':''} onchange="D['${c}']=this.checked"><span>匯出時${t}多給 <input type=number min=1 max=15 value=${D[n]||3} onchange="D['${n}']=Math.max(1,Math.min(15,+this.value||3))" style="width:64px;display:inline-block;padding:4px 8px;margin:0"> 行空白</span></label>`;
+function setLite(v){D.lite=v;render()}
+const woChips=()=>`<label>錯的是哪個選項（選填）</label><div class=chips>${'ABCDE'.split('').map(c=>`<button type=button class="chip ${(D.wo||[]).includes(c)?'on':''}" onclick="togWO('${c}',this)">(${c})</button>`).join('')}</div>`;
+function togWO(c,b){D.wo=D.wo||[];const k=D.wo.indexOf(c);k<0?D.wo.push(c):D.wo.splice(k,1);D.wo.sort();b.classList.toggle('on',k<0)}
 function vForm(){
  return `<button class=back onclick="D.id?go('detail',{id:D.id}):go('list')">← 取消</button><h1>${D.id?'編輯':'新增'}錯題</h1>
  <div id=fm class="${D.sub=='數學'?'m':''}">
+ <label>題目名稱（選填，顯示在錯題列表；不填就顯示題目開頭）</label><input value="${esc(D.name||'')}" maxlength=60 placeholder="例如：112 學年 段考一 第 4 題" oninput="D.name=this.value">
+ <label>記錄方式</label><div class=chips><button type=button class="chip ${D.lite?'':'on'}" onclick="setLite(false)">完整記錄</button><button type=button class="chip ${D.lite?'on':''}" onclick="setLite(true)">簡易記錄（只記題目＋錯誤選項的觀念）</button></div>
  <label>標籤（例如：112學年、第一次段考）</label><div id=tgb></div>
  <label>科目</label><select onchange="D.sub=this.value;$('#fm').classList.toggle('m',D.sub=='數學');FLD.forEach(x=>upd(x[0]))">${S.subjects.map(s=>`<option ${s==D.sub?'selected':''}>${esc(s)}</option>`).join('')}</select>
- ${FLD.map(([k,l,ik,ph])=>`<label>${l}</label><div class=tw><textarea id=t_${k} rows=${k=='mine'||k=='ans'?2:4} placeholder="${ph}" oninput="D.${k}=this.value;pv('${k}')" onfocus="ED['${k}']=true" onblur="blurF('${k}')">${esc(D[k])}</textarea><span class=grip data-t="t_${k}" title="拖曳調整高度"></span></div><div class="tx pvw" id=p_${k} onclick="if(this.classList.contains('view')){ED['${k}']=true;upd('${k}');$('#t_${k}').focus()}"></div><div class=mtb>${M.map((m,n)=>`<button type=button onpointerdown="KEEP=Date.now();event.preventDefault()" onclick="ins(M[${n}][1],'${k}')">${m[0]}</button>`).join('')}</div>${ik?`<div class=ims id=i_${ik}></div><button type=button class=ghost onclick="pick('${ik}')">＋ 圖片／拍照</button>`:''}${k=='q'?OCRB():k=='ex'?AIB():k=='th'?XL('c1','n1','「當時思路與錯誤原因」'):''}`).join('')}
- <label>再練一次</label>${XL('c2','n2','「再練一次」')}
+ ${(D.lite?[FLD[0],['ex','錯誤選項的觀念（寫你當時搞錯的那個觀念，一兩句就好）',0,'例如：動量守恆只適用於不受外力的系統…']]:FLD).map(([k,l,ik,ph])=>`<label>${l}</label><div class=tw><textarea id=t_${k} rows=${k=='mine'||k=='ans'?2:4} placeholder="${ph}" oninput="D.${k}=this.value;pv('${k}')" onfocus="ED['${k}']=true" onblur="blurF('${k}')">${esc(D[k])}</textarea><span class=grip data-t="t_${k}" title="拖曳調整高度"></span></div><div class="tx pvw" id=p_${k} onclick="if(this.classList.contains('view')){ED['${k}']=true;upd('${k}');$('#t_${k}').focus()}"></div><div class=mtb>${M.map((m,n)=>`<button type=button onpointerdown="KEEP=Date.now();event.preventDefault()" onclick="ins(M[${n}][1],'${k}')">${m[0]}</button>`).join('')}</div>${ik?`<div class=ims id=i_${ik}></div><button type=button class=ghost onclick="pick('${ik}')">＋ 圖片／拍照</button>`:''}${k=='q'?OCRB()+(D.lite?woChips():''):k=='ex'&&!D.lite?AIB():k=='th'?XL('c1','n1','「當時思路與錯誤原因」'):''}`).join('')}
+ ${D.lite?'':`<label>再練一次</label>${XL('c2','n2','「再練一次」')}`}
  <div class=acts><button class=btn style="width:100%" onclick="saveItem()">儲存</button></div></div>`}
 document.addEventListener('pointerdown',e=>{const gp=e.target.closest&&e.target.closest('.grip');if(!gp)return;
  const t=document.getElementById(gp.dataset.t),y0=e.clientY,h0=t.offsetHeight;KEEP=Date.now();gp.setPointerCapture(e.pointerId);e.preventDefault();
@@ -334,6 +343,7 @@ function vStat(){const it=S.items,n=it.length;
  return `<h1>總覽</h1>
  <div class=stat-g><div class=stc><span class=mu>總題數</span><b>${n}</b></div><div class=stc><span class=mu>本週新增</span><b>${wk}</b></div>
  <div class=stc><span class=mu>已掌握</span><b>${mas}</b><span class=mu>${pc(mas)}</span></div><div class=stc><span class=mu>還沒練習</span><b>${nev}</b><span class=mu>${pc(nev)}</span></div></div>
+ ${it.some(i=>i.lite)?`<p class=mu style="margin:10px 0 0">完整記錄 ${it.filter(i=>!i.lite).length} 題・簡易記錄 ${it.filter(i=>i.lite).length} 題</p>`:''}
  <div class=dnrow><div class=dncard><h3>錯題科目占比</h3><p class=mu>各科目錯題數量比例（點圓環可看單一科目）</p>${donut(sp,n,'題')}</div>
  <div class=dncard><h3>掌握進度</h3><p class=mu>已掌握＝連續答對 2 次</p>${donut([{l:'已掌握',n:mas,c:'var(--ac)'},{l:'練習中',n:pra,c:'var(--c4)'},{l:'未練習',n:nev,c:'var(--cx)'}],pc(mas),'已掌握')}</div></div>
  ${tg.length?`<h3>標籤分布（前 ${tg.length} 名）</h3>${tg.map(x=>bar('#'+x[0],x[1],tg[0][1],'#6c8ebf')).join('')}`:''}
@@ -345,17 +355,17 @@ function vPrac(){const i=P.q[P.i];
  if(!i)return `<h1>練習完成 🎉</h1><p>共 ${P.q.length} 題：答對 ${P.ok}、答錯 ${P.ng}</p><div class=acts><button class=btn onclick="go('list')">回到錯題本</button></div>`;
  return `<div class=row><span class=tag>${esc(i.sub)}</span><span class=st>${P.i+1} / ${P.q.length}</span></div>
  <section class=b><h3>題目</h3>${i.q?`<div class=tx>${rt(i.q)}</div>`:''}${i.qi.map(u=>`<img src="${u}">`).join('')}</section>
- ${P.show?blk(i,'mine','自己選的答案')+blk(i,'th','當時思路與錯誤原因','ti')+blk(i,'ans','正確答案')+blk(i,'ex','詳解／最佳解','ei')+`<div class=acts><button class=btn onclick="mark(1)">我答對了</button><button class="ghost dn" onclick="mark(0)">還是錯了</button></div>`
+ ${P.show?(i.lite?blk(i,'ex',liteLbl(i),'ei'):blk(i,'mine','自己選的答案')+blk(i,'th','當時思路與錯誤原因','ti')+blk(i,'ans','正確答案')+blk(i,'ex','詳解／最佳解','ei'))+`<div class=acts><button class=btn onclick="mark(1)">我答對了</button><button class="ghost dn" onclick="mark(0)">還是錯了</button></div>`
  :`<div class=acts><button class=btn onclick="P.show=1;render()">顯示答案</button></div>`}`}
 async function mark(ok){const i=P.q[P.i];i.tries=(i.tries||0)+1;i.last=Date.now();i.streak=ok?(i.streak||0)+1:0;ok?P.ok++:P.ng++;P.i++;P.show=0;await save();render();scrollTo(0,0)}
 
 const AIM={anthropic:'claude-sonnet-5-5',openai:'gpt-4o',gemini:'gemini-2.0-flash'};
 function aiCfg(){try{return JSON.parse(localStorage.getItem('ai')||'{}')}catch(e){return{}}}
 function aiSet(){const c={p:$('#ap').value,m:$('#am').value.trim(),k:$('#ak').value.trim()};try{localStorage.setItem('ai',JSON.stringify(c));toast('已儲存')}catch(e){toast('無法儲存設定')}}
-const OCRB=()=>`<div class=row style="margin-top:8px"><button type=button id=ocb class=ghost onclick="aiOcr()">🔎 AI 辨識題目</button><button type=button id=ocb2 class=ghost onclick="aiBoth()">🔎＋🤖 辨識＋解題</button><span id=ocs class=mu style="flex-basis:100%"></span></div>`;
+const OCRB=()=>`<div class=row style="margin-top:8px"><button type=button id=ocb class=ghost onclick="aiOcr()">🔎 AI 辨識題目</button>${D.lite?'':'<button type=button id=ocb2 class=ghost onclick="aiBoth()">🔎＋🤖 辨識＋解題</button>'}<span id=ocs class=mu style="flex-basis:100%"></span></div>`;
 async function aiOcr(){
  if(!D.qi.length)return toast('請先在題目欄加入圖片');
- const b=$('#ocb'),b2=$('#ocb2'),st=$('#ocs');b.disabled=b2.disabled=true;st.textContent='辨識中…';
+ const b=$('#ocb'),b2=$('#ocb2')||{},st=$('#ocs');b.disabled=b2.disabled=true;st.textContent='辨識中…';
  const pr='請把圖片中的題目完整轉成文字，使用繁體中文（若是英文題就保留英文）。規則：\n．只輸出題目本身，不要解題、不要加說明、不要前言或結語。\n．保留完整題幹；選擇題的選項各佔一行，寫成「(A) …」「(B) …」，順序與圖片相同。\n．填充題的空格用「____」表示，保留原本的空格數量與順序。\n．數學、物理、化學的式子與符號一律用 LaTeX：行內用 $…$，獨立一行用 $$…$$，符號必須成對；中文標點不要放進公式裡；化學式寫成 $\\mathrm{H_2O}$ 這種形式。\n．圖形、座標圖無法轉成文字時，在該位置寫「［見圖］」；表格用一行一列，欄位之間以「｜」分隔。\n．圖片上的手寫筆記、劃記、圈選、答案一律忽略，不要抄進來。\n．不要使用 Markdown 符號（不要 **粗體**、# 標題、程式碼區塊）。';
  try{const t=cleanAI(await aiAsk(pr,D.qi)).trim();if(!t)throw new Error('沒有辨識到文字');
   if(D.q.trim()){D.q=confirm('題目欄已經有文字。\n按「確定」＝用辨識結果取代；按「取消」＝附加在原本文字後面。')?t:D.q.trim()+'\n\n'+t}else D.q=t;
@@ -500,7 +510,7 @@ function imp(){const f=document.createElement('input');f.type='file';f.accept='.
    d.items.slice(0,500).forEach((it,k)=>{if(!it||typeof it!='object')return;const sid=str(it.sid,40)||('x'+k);
     if(have.has(sid)){skip++;return}
     const sub=str(it.sub,30)||S.subjects[0];if(!S.subjects.includes(sub))S.subjects.push(sub);
-    S.items.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6)+k,sid,sub,why:str(it.why,200),q:str(it.q),qi:imgs(it.qi),mine:str(it.mine),th:str(it.th),ti:imgs(it.ti),ans:str(it.ans),ex:str(it.ex),ei:imgs(it.ei),
+    S.items.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6)+k,sid,sub,why:str(it.why,200),name:str(it.name,60),lite:!!it.lite,wo:(Array.isArray(it.wo)?it.wo:[]).map(c=>String(c)).filter(c=>/^[A-E]$/.test(c)),q:str(it.q),qi:imgs(it.qi),mine:str(it.mine),th:str(it.th),ti:imgs(it.ti),ans:str(it.ans),ex:str(it.ex),ei:imgs(it.ei),
      tags:(Array.isArray(it.tags)?it.tags:[]).map(t=>str(t,30).trim()).filter(Boolean).slice(0,20),c1:!!it.c1,n1:Math.max(1,Math.min(15,+it.n1||3)),c2:!!it.c2,n2:Math.max(1,Math.min(15,+it.n2||3)),tries:0,streak:0,last:0,created:now+k});add++});
    await save();toast(add?`已加入 ${add} 題${skip?`，略過 ${skip} 題（已經有了）`:''}`:'這些題目你已經有了');V.f='全部';V.tgs=[];V.s='';go('list');return}
   (d.subjects||[]).forEach(s=>S.subjects.includes(s)||S.subjects.push(s));
@@ -520,7 +530,7 @@ function vExp(){const l=xl(),n=l.filter(i=>X.sel[i.id]).length;
  <label>檔案類型</label><select onchange="X.t=this.value">${o('jpg','圖片（.jpg，一題一張，逐張存檔）',X.t=='jpg')}${o('zip','圖片（多題打包成一個 .zip）',X.t=='zip')}${o('pdf','PDF（.pdf，每頁放兩題）',X.t=='pdf')}${o('docx','Word（.docx）',X.t=='docx')}${o('html','網頁（.html，可用瀏覽器列印成 PDF）',X.t=='html')}</select>
  ${canSh()?`<label class=ck style="margin-top:14px"><input type=checkbox ${X.sh?'checked':''} onchange="X.sh=this.checked"><span>產生後用系統分享選單，直接傳到筆記軟體（GoodNotes、Notability、OneNote…）</span></label>`:''}
  <p class=mu style="margin:14px 0 8px">要匯出的題目（${n} / ${l.length}）</p>
- ${l.map(i=>`<label class="card ck"><input type=checkbox ${X.sel[i.id]?'checked':''} onchange="X.sel['${i.id}']=this.checked;render()"><span><span class=tag>${esc(i.sub)}</span> ${i.q?esc(i.q.replace(/\$/g,'').slice(0,60)):'（圖片題目）'}</span></label>`).join('')}
+ ${l.map(i=>`<label class="card ck"><input type=checkbox ${X.sel[i.id]?'checked':''} onchange="X.sel['${i.id}']=this.checked;render()"><span><span class=tag>${esc(i.sub)}</span> ${(i.name&&i.name.trim())?esc(i.name.trim()):i.q?esc(i.q.replace(/\$/g,'').slice(0,60)):'（圖片題目）'}</span></label>`).join('')}
  <div class=acts><button class=btn ${n?'':'disabled'} onclick="doExp()">產生檔案（${n} 題）</button></div>`}
 async function raster(root){for(const c of [...root.querySelectorAll('mjx-container')]){const s=c.querySelector('svg');if(!s)continue;
  const r=s.getBoundingClientRect(),w=Math.ceil(r.width),h=Math.ceil(r.height);if(!w)continue;
@@ -542,9 +552,10 @@ async function doExp(){
   td=(c,k,sp)=>`<td${sp?' colspan=2':''}${k?` class=${k}`:''}>${c}</td>`,
   two=(a,b)=>`<tr>${td(a,'h2')}${td(b,'h2')}</tr>`,one=(c,k)=>`<tr>${td(c,k,1)}</tr>`,
   th=i=>`<p class=l style="color:#c0392b">當時思路與錯誤原因</p><div style="min-height:${(i.c1?(i.n1||3):0)*26}px">${tx(i.th)}${im(i.ti)}</div>`,
+  lr=i=>one(`<p class=l style="color:#c0392b">${liteLbl(i)}</p><div class=ex>${tx(cpx(i.ex))}${im(i.ei)}</div>`,'h3'),
   r2=i=>two(cl('正確答案',i.ans),cl('自己選的答案',i.mine,0,1))+one(th(i),'h4')+one(`<p class=l>詳解／最佳解</p><div class=ex>${tx(cpx(i.ex))}${im(i.ei)}</div>`,'h3');
- let h=l.map((i,n)=>'<table class="q eq">'+one(head(i,n+1)+txq(i.q)+im(i.qi))+(m==3?r2(i)+(rpOn()?one(`<p class=l>再練一次</p>${rqOn()?txq(i.q)+im(i.qi):''}${ln(i)}`,'bz'):''):one(`<p class=l>作答區</p>${ln(i)}`,'bz'))+'</table>').join('');
- if(m==2)h+='<div class=pb></div><h1>參考答案與詳解</h1>'+l.map((i,n)=>'<table class=q>'+one(head(i,n+1))+r2(i)+'</table>').join('');
+ let h=l.map((i,n)=>'<table class="q eq">'+one(head(i,n+1)+txq(i.q)+im(i.qi))+(m==3?(i.lite?lr(i):r2(i))+(rpOn()?one(`<p class=l>再練一次</p>${rqOn()?txq(i.q)+im(i.qi):''}${ln(i)}`,'bz'):''):one(`<p class=l>作答區</p>${ln(i)}`,'bz'))+'</table>').join('');
+ if(m==2)h+='<div class=pb></div><h1>參考答案與詳解</h1>'+l.map((i,n)=>'<table class=q>'+one(head(i,n+1))+(i.lite?lr(i):r2(i))+'</table>').join('');
  const css='@page{size:A4;margin:12mm 12mm 12mm 15mm}body{font:11pt/1.7 "PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;color:#000;width:183mm;margin:0 auto;padding:12px 0}@media print{body{width:auto;padding:0}}h1{font-size:18pt}h2{font-size:13pt;margin:0 0 6px}h2 small{font-weight:400;color:#666;font-size:10pt}.q{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;border:1.5px solid #333;border-radius:14px;margin:0 0 32px;page-break-inside:avoid;break-inside:avoid}.q td{padding:8px 16px;vertical-align:top;overflow-wrap:anywhere;min-width:0;overflow:hidden}.q tr+tr td{border-top:1.5px solid #333}.q td.h2:first-child{border-right:1.5px solid #333}.h2{width:50%;height:44px}.h3{height:56px}.h4{height:44px}.q img:not(.mi){display:block;margin:6px 0;width:auto;height:auto;max-width:100%;object-fit:contain}.q tr:first-child img:not(.mi){max-height:'+qhPx()+'px}.q tr+tr img:not(.mi){max-height:170px}img.mi{display:inline;vertical-align:middle;max-width:100%;height:auto!important}img.mi.dm{display:block;margin:3px auto}.l{margin:2px 0;font-weight:700;color:#1f7a5c}.bl{height:90px}.pb{page-break-after:always}.ex{font-size:.91em;line-height:1.4}.ex img.dm{margin:3px auto!important}';
  const d=document.createElement('div');d.style.cssText='position:absolute;left:-9999px;top:0;width:680px';d.innerHTML=h;document.body.appendChild(d);
  try{if(window.MathJax&&MathJax.typesetPromise){await MathJax.typesetPromise([d]);await raster(d)}}catch(e){}
@@ -630,13 +641,14 @@ async function mkDocx(l,m){
  const T=(t,z)=>`<w:p><w:pPr><w:spacing w:before="0" w:after="120"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="${z}"/></w:rPr><w:t>${t}</w:t></w:r></w:p>`;
  let b=T('錯題本'+(X.f=='全部'?'':'－'+esc(X.f)),36);
  const R2=async i=>two(1000,L('正確答案')+await P(i.ans),L('自己選的答案','C0392B')+await P(i.mine)),
+  RL=async i=>full(1000,L(liteLbl(i),'C0392B')+(sz=20,await P(cpx(i.ex)))+(sz=0,'')+await PI(i.ei)),
   R3=async (i,hq)=>full(Math.max(1000+(i.c1?(i.n1||3):0)*400,Math.round((hq||0)/2)),L('當時思路與錯誤原因','C0392B')+await P(i.th)+await PI(i.ti))+full(Math.max(1400,hq||0),L('詳解／最佳解')+(sz=20,await P(cpx(i.ex)))+(sz=0,'')+await PI(i.ei));
  for(let n=0;n<l.length;n++){const i=l[n],a0=acc,qx=(lh=336,await P(i.q))+(lh=0,'')+await PI(i.qi,qhPx()),
    nl=(i.q||'').split('\n').reduce((z,t)=>z+Math.max(1,Math.ceil(t.replace(/\$[^$]*\$/g,'口').length/38)),0),hq=(i.q||(i.qi&&i.qi.length))?600+nl*340+(acc-a0):0;
   const S3=hq+1000+Math.max(1000+(i.c1?(i.n1||3):0)*400,Math.round(hq/2))+Math.max(1400,hq),f3=Math.max(hq,6900-S3),f1=Math.max(hq,6900-hq);
-  b+=tb(full(0,HD(i,n+1)+qx)+(m==3?await R2(i)+await R3(i,hq)+(rpOn()?full(f3,L('再練一次')+(rqOn()?clone(qx):'')+BL(i,rqOn()?0:hq)):''):full(f1,L('作答區')+BL(i,hq))))}
+  b+=tb(full(0,HD(i,n+1)+qx)+(m==3?(i.lite?await RL(i):await R2(i)+await R3(i,hq))+(rpOn()?full(f3,L('再練一次')+(rqOn()?clone(qx):'')+BL(i,rqOn()?0:hq)):''):full(f1,L('作答區')+BL(i,hq))))}
  if(m==2){b+='<w:p><w:r><w:br w:type="page"/></w:r></w:p>'+T('參考答案與詳解',32);
-  for(let n=0;n<l.length;n++){const i=l[n];b+=tb(full(0,HD(i,n+1))+await R2(i)+await R3(i))}}
+  for(let n=0;n<l.length;n++){const i=l[n];b+=tb(full(0,HD(i,n+1))+(i.lite?await RL(i):await R2(i)+await R3(i)))}}
  const W='http://schemas.openxmlformats.org/',R=W+'officeDocument/2006/relationships/',X0='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',Z=new JSZip();
  Z.file('[Content_Types].xml',`${X0}<Types xmlns="${W}package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`);
  Z.file('_rels/.rels',`${X0}<Relationships xmlns="${W}package/2006/relationships"><Relationship Id="rId1" Type="${R}officeDocument" Target="word/document.xml"/></Relationships>`);
